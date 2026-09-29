@@ -480,6 +480,7 @@
     async function convertToLatex() {
       const apiKey = apiKeyInput.value.trim() || localStorage.getItem("gemini_api_key");
       const statusBar = document.getElementById("statusBar");
+      const convertBtn = document.getElementById("convertBtn");
 
       if (!apiKey) {
         statusBar.textContent = "Please provide a Google AI Studio API key.";
@@ -487,8 +488,8 @@
         return;
       }
 
-      const convertBtn = document.getElementById("convertBtn");
       convertBtn.disabled = true;
+      statusBar.textContent = "Transcribing with Gemini 3.8 Flash...";
 
       const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
 
@@ -523,54 +524,59 @@
       };
 
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
-      const maxRetries = 3;
 
-      for (let attempt = 1; attempt <= maxRetries; attempt++) {
-        statusBar.textContent = attempt === 1 
-          ? "Transcribing with Gemini 3.8 Flash..." 
-          : `Server busy. Retrying (${attempt}/${maxRetries})...`;
+      try {
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
 
-        try {
-          const response = await fetch(endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
+        if (!response.ok) {
+          const errData = await response.json().catch(() => ({}));
+          const errMsg = errData.error?.message || `HTTP ${response.status}`;
 
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            const errMsg = errData.error?.message || `HTTP ${response.status}`;
+          // Detect rate limit (429) and handle retry timer
+          if (response.status === 429 || errMsg.includes("Quota exceeded")) {
+            const match = errMsg.match(/retry in ([0-9.]+)s/i);
+            let waitSeconds = match ? Math.ceil(parseFloat(match)) : 15;
 
-            const isBusy = response.status === 503 || response.status === 429 || errMsg.toLowerCase().includes("high demand");
-            if (isBusy && attempt < maxRetries) {
-              await new Promise((r) => setTimeout(r, attempt * 1500));
-              continue;
-            }
-            throw new Error(errMsg);
-          }
-
-          const data = await response.json();
-          let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          rawText = rawText.replace(/```latex/gi, "").replace(/```/g, "").trim();
-
-          if (rawText) {
-            renderLatex(rawText);
-            statusBar.textContent = "Conversion complete.";
-            convertBtn.disabled = false;
-            return;
-          } else {
-            statusBar.textContent = "No formula detected. Please redraw clearly.";
-            convertBtn.disabled = false;
+            const timer = setInterval(() => {
+              if (waitSeconds <= 0) {
+                clearInterval(timer);
+                statusBar.textContent = "Ready to try again.";
+                convertBtn.disabled = false;
+                convertBtn.textContent = "⚡ Convert to LaTeX";
+              } else {
+                convertBtn.textContent = `Wait ${waitSeconds}s...`;
+                statusBar.textContent = `Rate limit cooldown: ${waitSeconds}s remaining`;
+                waitSeconds--;
+              }
+            }, 1000);
             return;
           }
-        } catch (error) {
-          if (attempt === maxRetries) {
-            statusBar.textContent = `Error: ${error.message}`;
-          }
+
+          throw new Error(errMsg);
+        }
+
+        const data = await response.json();
+        let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+        rawText = rawText.replace(/```latex/gi, "").replace(/```/g, "").trim();
+
+        if (rawText) {
+          renderLatex(rawText);
+          statusBar.textContent = "Conversion complete.";
+        } else {
+          statusBar.textContent = "No formula detected. Please redraw clearly.";
+        }
+      } catch (error) {
+        statusBar.textContent = `Error: ${error.message}`;
+      } finally {
+        if (!convertBtn.textContent.includes("Wait")) {
+          convertBtn.disabled = false;
+          convertBtn.textContent = "⚡ Convert to LaTeX";
         }
       }
-
-      convertBtn.disabled = false;
     }
 
     document.getElementById("convertBtn").addEventListener("click", convertToLatex);
