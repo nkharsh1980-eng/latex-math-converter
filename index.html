@@ -522,12 +522,13 @@
         },
       };
 
-      const models = ["gemini-3.8-flash", "gemini-2.0-flash"];
+      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+      const maxRetries = 3;
 
-      for (let i = 0; i < models.length; i++) {
-        const model = models[i];
-        statusBar.textContent = `Transcribing with ${model}...`;
-        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+      for (let attempt = 1; attempt <= maxRetries; attempt++) {
+        statusBar.textContent = attempt === 1 
+          ? "Transcribing with Gemini 3.8 Flash..." 
+          : `Server busy. Retrying (${attempt}/${maxRetries})...`;
 
         try {
           const response = await fetch(endpoint, {
@@ -540,9 +541,9 @@
             const errData = await response.json().catch(() => ({}));
             const errMsg = errData.error?.message || `HTTP ${response.status}`;
 
-            if ((response.status === 503 || response.status === 429 || errMsg.includes("high demand")) && i < models.length - 1) {
-              statusBar.textContent = `${model} busy. Trying ${models[i + 1]}...`;
-              await new Promise((r) => setTimeout(r, 1200));
+            const isBusy = response.status === 503 || response.status === 429 || errMsg.toLowerCase().includes("high demand");
+            if (isBusy && attempt < maxRetries) {
+              await new Promise((r) => setTimeout(r, attempt * 1500));
               continue;
             }
             throw new Error(errMsg);
@@ -563,7 +564,7 @@
             return;
           }
         } catch (error) {
-          if (i === models.length - 1) {
+          if (attempt === maxRetries) {
             statusBar.textContent = `Error: ${error.message}`;
           }
         }
