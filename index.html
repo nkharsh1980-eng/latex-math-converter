@@ -5,7 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
   <title>Math & Physics LaTeX Converter</title>
   
-  <!-- KaTeX for rendering LaTeX math previews -->
   <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
   <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
 
@@ -73,7 +72,6 @@
       box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
     }
 
-    /* API Key Section */
     .api-section {
       display: flex;
       flex-direction: column;
@@ -109,7 +107,6 @@
       border-color: var(--primary);
     }
 
-    /* Canvas Controls */
     .canvas-container {
       position: relative;
       width: 100%;
@@ -179,7 +176,6 @@
       display: none;
     }
 
-    /* Status indicator */
     .status-bar {
       font-size: 0.8rem;
       text-align: center;
@@ -187,7 +183,6 @@
       color: var(--text-muted);
     }
 
-    /* Output Section */
     .output-section {
       display: flex;
       flex-direction: column;
@@ -240,10 +235,9 @@
   <div class="container">
     <header>
       <h1>Math & Physics to LaTeX</h1>
-      <p>Draw or upload equations to convert using Gemini 1.5 Flash</p>
+      <p>Draw or upload equations to convert using Gemini</p>
     </header>
 
-    <!-- API Key Input -->
     <div class="card api-section">
       <label for="apiKey">Google AI Studio API Key</label>
       <div class="api-input-row">
@@ -252,7 +246,6 @@
       </div>
     </div>
 
-    <!-- Drawing Board -->
     <div class="card">
       <div class="canvas-container">
         <canvas id="paintCanvas"></canvas>
@@ -278,7 +271,6 @@
       <div class="status-bar" id="statusBar">Ready</div>
     </div>
 
-    <!-- Output Area -->
     <div class="card output-section" id="outputCard">
       <div class="output-header">
         <span class="output-title">Rendered Preview</span>
@@ -295,7 +287,6 @@
   </div>
 
   <script>
-    // --- Canvas & Drawing State ---
     const canvas = document.getElementById("paintCanvas");
     const ctx = canvas.getContext("2d");
     let isDrawing = false;
@@ -306,7 +297,6 @@
       const rect = canvas.parentElement.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
 
-      // Preserve existing content during resize
       let tempCanvas = null;
       if (canvas.width > 0 && canvas.height > 0) {
         tempCanvas = document.createElement("canvas");
@@ -319,7 +309,6 @@
       canvas.height = rect.height * dpr;
       ctx.scale(dpr, dpr);
 
-      // Fill with white background
       ctx.fillStyle = "#ffffff";
       ctx.fillRect(0, 0, rect.width, rect.height);
 
@@ -342,7 +331,7 @@
 
     function undo() {
       if (history.length > 1) {
-        history.pop(); // Remove current state
+        history.pop();
         const prevState = history[history.length - 1];
         const img = new Image();
         img.onload = () => {
@@ -398,9 +387,216 @@
       }
     }
 
-    // Touch & Mouse Event Listeners
     canvas.addEventListener("touchstart", startDraw, { passive: false });
     canvas.addEventListener("touchmove", draw, { passive: false });
+    canvas.addEventListener("touchend", stopDraw);
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mousemove", draw);
+    canvas.addEventListener("mouseup", stopDraw);
+    canvas.addEventListener("mouseleave", stopDraw);
+
+    document.getElementById("clearBtn").addEventListener("click", clearCanvas);
+    document.getElementById("undoBtn").addEventListener("click", undo);
+
+    function handleImageFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const rect = canvas.getBoundingClientRect();
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, rect.width, rect.height);
+
+          const hRatio = rect.width / img.width;
+          const vRatio = rect.height / img.height;
+          const ratio = Math.min(hRatio, vRatio);
+          const centerShiftX = (rect.width - img.width * ratio) / 2;
+          const centerShiftY = (rect.height - img.height * ratio) / 2;
+
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            img.width,
+            img.height,
+            centerShiftX,
+            centerShiftY,
+            img.width * ratio,
+            img.height * ratio
+          );
+          saveState();
+          document.getElementById("statusBar").textContent = "Image loaded on canvas";
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    document.getElementById("cameraUpload").addEventListener("change", (e) => {
+      handleImageFile(e.target.files[0]);
+    });
+    document.getElementById("fileUpload").addEventListener("change", (e) => {
+      handleImageFile(e.target.files[0]);
+    });
+
+    const apiKeyInput = document.getElementById("apiKey");
+    const savedKey = localStorage.getItem("gemini_api_key");
+    if (savedKey) {
+      apiKeyInput.value = savedKey;
+    }
+
+    document.getElementById("saveKeyBtn").addEventListener("click", () => {
+      const key = apiKeyInput.value.trim();
+      if (key) {
+        localStorage.setItem("gemini_api_key", key);
+        document.getElementById("statusBar").textContent = "API key saved locally";
+      } else {
+        localStorage.removeItem("gemini_api_key");
+        document.getElementById("statusBar").textContent = "API key removed";
+      }
+    });
+
+    function renderLatex(latexString) {
+      const previewArea = document.getElementById("previewArea");
+      const rawTextarea = document.getElementById("rawLatex");
+      rawTextarea.value = latexString;
+
+      let cleanMath = latexString.trim();
+      cleanMath = cleanMath.replace(/^\\\[/, "").replace(/\\\]$/, "");
+      cleanMath = cleanMath.replace(/^\$\$/, "").replace(/\$\$$/, "");
+      cleanMath = cleanMath.replace(/^\\begin{equation\*?}/, "").replace(/\\end{equation\*?}$/, "");
+
+      try {
+        katex.render(cleanMath, previewArea, {
+          displayMode: true,
+          throwOnError: false,
+        });
+      } catch (err) {
+        previewArea.textContent = latexString;
+      }
+    }
+
+    async function convertToLatex() {
+      const apiKey = apiKeyInput.value.trim() || localStorage.getItem("gemini_api_key");
+      const statusBar = document.getElementById("statusBar");
+
+      if (!apiKey) {
+        statusBar.textContent = "Please provide a Google AI Studio API key.";
+        apiKeyInput.focus();
+        return;
+      }
+
+      const convertBtn = document.getElementById("convertBtn");
+      convertBtn.disabled = true;
+
+      const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+
+      const promptText = 
+        "You are an expert LaTeX transcription system specializing in advanced mathematics, physics, and chemistry.\n" +
+        "Task: Transcribe all handwritten or printed mathematical and physical formulas from the provided image into clean, standard LaTeX code.\n" +
+        "Rules:\n" +
+        "1. Output ONLY the LaTeX code. Do NOT wrap in markdown code fences (no ```latex or ```).\n" +
+        "2. Do NOT add conversational replies, commentary, or greetings.\n" +
+        "3. Use standard packages such as amsmath, amssymb, and physics.\n" +
+        "4. For multi-line equations or derivations, use the \\begin{align*} ... \\end{align*} environment.\n" +
+        "5. For single formulas, write the raw math expression or standard equation format without excess whitespace.";
+
+      const payload = {
+        contents: [
+          {
+            role: "user",
+            parts: [
+              { text: promptText },
+              {
+                inline_data: {
+                  mime_type: "image/png",
+                  data: base64Data,
+                },
+              },
+            ],
+          },
+        ],
+        generationConfig: {
+          temperature: 0.1,
+        },
+      };
+
+      const models = ["gemini-3.8-flash", "gemini-2.0-flash"];
+
+      for (let i = 0; i < models.length; i++) {
+        const model = models[i];
+        statusBar.textContent = `Transcribing with ${model}...`;
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`;
+
+        try {
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            const errMsg = errData.error?.message || `HTTP ${response.status}`;
+
+            if ((response.status === 503 || response.status === 429 || errMsg.includes("high demand")) && i < models.length - 1) {
+              statusBar.textContent = `${model} busy. Trying ${models[i + 1]}...`;
+              await new Promise((r) => setTimeout(r, 1200));
+              continue;
+            }
+            throw new Error(errMsg);
+          }
+
+          const data = await response.json();
+          let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          rawText = rawText.replace(/```latex/gi, "").replace(/```/g, "").trim();
+
+          if (rawText) {
+            renderLatex(rawText);
+            statusBar.textContent = "Conversion complete.";
+            convertBtn.disabled = false;
+            return;
+          } else {
+            statusBar.textContent = "No formula detected. Please redraw clearly.";
+            convertBtn.disabled = false;
+            return;
+          }
+        } catch (error) {
+          if (i === models.length - 1) {
+            statusBar.textContent = `Error: ${error.message}`;
+          }
+        }
+      }
+
+      convertBtn.disabled = false;
+    }
+
+    document.getElementById("convertBtn").addEventListener("click", convertToLatex);
+
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      const rawText = document.getElementById("rawLatex").value;
+      if (!rawText) return;
+
+      try {
+        await navigator.clipboard.writeText(rawText);
+        const copyBtn = document.getElementById("copyBtn");
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 1800);
+      } catch (err) {
+        document.getElementById("statusBar").textContent = "Clipboard access denied.";
+      }
+    });
+
+    window.addEventListener("load", resizeCanvas);
+    window.addEventListener("resize", resizeCanvas);
+  </script>
+</body>
+</html>
+ canvas.addEventListener("touchmove", draw, { passive: false });
     canvas.addEventListener("touchend", stopDraw);
     canvas.addEventListener("mousedown", startDraw);
     canvas.addEventListener("mousemove", draw);
