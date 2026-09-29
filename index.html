@@ -1,0 +1,603 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>Math & Physics LaTeX Converter</title>
+  
+  <!-- KaTeX for rendering LaTeX math previews -->
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
+  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --danger: #ef4444;
+      --success: #10b981;
+      --canvas-bg: #ffffff;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      -webkit-tap-highlight-color: transparent;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      padding: 12px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      min-height: 100vh;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 520px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    header {
+      text-align: center;
+      padding: 6px 0;
+    }
+
+    header h1 {
+      font-size: 1.25rem;
+      font-weight: 700;
+    }
+
+    header p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      margin-top: 2px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 12px;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+    }
+
+    /* API Key Section */
+    .api-section {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .api-section label {
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+    }
+
+    .api-input-row {
+      display: flex;
+      gap: 8px;
+    }
+
+    input[type="password"],
+    input[type="text"] {
+      flex: 1;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 0.85rem;
+      outline: none;
+    }
+
+    input:focus {
+      border-color: var(--primary);
+    }
+
+    /* Canvas Controls */
+    .canvas-container {
+      position: relative;
+      width: 100%;
+      aspect-ratio: 4 / 3;
+      background: var(--canvas-bg);
+      border-radius: 10px;
+      overflow: hidden;
+      touch-action: none;
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: crosshair;
+    }
+
+    .toolbar {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 70px;
+      padding: 9px 12px;
+      font-size: 0.85rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #334155;
+      color: var(--text);
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: background 0.15s ease;
+    }
+
+    .btn:active {
+      transform: scale(0.98);
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      border-color: var(--primary);
+      flex: 2;
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+    }
+
+    .btn-danger {
+      color: #fca5a5;
+    }
+
+    .btn-success {
+      background: var(--success);
+      border-color: var(--success);
+    }
+
+    .file-input {
+      display: none;
+    }
+
+    /* Status indicator */
+    .status-bar {
+      font-size: 0.8rem;
+      text-align: center;
+      min-height: 1.2rem;
+      color: var(--text-muted);
+    }
+
+    /* Output Section */
+    .output-section {
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .output-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .output-title {
+      font-size: 0.8rem;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+    }
+
+    .preview-box {
+      background: #ffffff;
+      color: #0f172a;
+      padding: 14px;
+      border-radius: 8px;
+      min-height: 70px;
+      overflow-x: auto;
+      font-size: 1.1rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    textarea.latex-raw {
+      width: 100%;
+      height: 90px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: #38bdf8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+      border-radius: 8px;
+      padding: 8px;
+      resize: vertical;
+      outline: none;
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <header>
+      <h1>Math & Physics to LaTeX</h1>
+      <p>Draw or upload equations to convert using Gemini 1.5 Flash</p>
+    </header>
+
+    <!-- API Key Input -->
+    <div class="card api-section">
+      <label for="apiKey">Google AI Studio API Key</label>
+      <div class="api-input-row">
+        <input type="password" id="apiKey" placeholder="Paste your API key here..." autocomplete="off" />
+        <button class="btn" id="saveKeyBtn">Save</button>
+      </div>
+    </div>
+
+    <!-- Drawing Board -->
+    <div class="card">
+      <div class="canvas-container">
+        <canvas id="paintCanvas"></canvas>
+      </div>
+
+      <div class="toolbar">
+        <button class="btn btn-danger" id="clearBtn">Clear</button>
+        <button class="btn" id="undoBtn">Undo</button>
+        <label class="btn" for="cameraUpload">
+          📷 Photo
+          <input type="file" id="cameraUpload" class="file-input" accept="image/*" capture="environment" />
+        </label>
+        <label class="btn" for="fileUpload">
+          📁 Upload
+          <input type="file" id="fileUpload" class="file-input" accept="image/*" />
+        </label>
+      </div>
+
+      <div class="toolbar" style="margin-top: 8px;">
+        <button class="btn btn-primary" id="convertBtn">⚡ Convert to LaTeX</button>
+      </div>
+
+      <div class="status-bar" id="statusBar">Ready</div>
+    </div>
+
+    <!-- Output Area -->
+    <div class="card output-section" id="outputCard">
+      <div class="output-header">
+        <span class="output-title">Rendered Preview</span>
+        <button class="btn btn-success" id="copyBtn" style="padding: 4px 10px; font-size: 0.75rem;">Copy LaTeX</button>
+      </div>
+
+      <div class="preview-box" id="previewArea">
+        <span style="color: #94a3b8; font-size: 0.9rem;">Equation preview will appear here</span>
+      </div>
+
+      <label class="output-title">Raw LaTeX Code</label>
+      <textarea id="rawLatex" class="latex-raw" readonly placeholder="LaTeX output will appear here..."></textarea>
+    </div>
+  </div>
+
+  <script>
+    // --- Canvas & Drawing State ---
+    const canvas = document.getElementById("paintCanvas");
+    const ctx = canvas.getContext("2d");
+    let isDrawing = false;
+    let history = [];
+    const maxHistory = 15;
+
+    function resizeCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      // Preserve existing content during resize
+      let tempCanvas = null;
+      if (canvas.width > 0 && canvas.height > 0) {
+        tempCanvas = document.createElement("canvas");
+        tempCanvas.width = canvas.width;
+        tempCanvas.height = canvas.height;
+        tempCanvas.getContext("2d").drawImage(canvas, 0, 0);
+      }
+
+      canvas.width = rect.width * dpr;
+      canvas.height = rect.height * dpr;
+      ctx.scale(dpr, dpr);
+
+      // Fill with white background
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+
+      if (tempCanvas) {
+        ctx.drawImage(tempCanvas, 0, 0, rect.width, rect.height);
+      } else {
+        saveState();
+      }
+
+      ctx.lineWidth = 3.5;
+      ctx.lineCap = "round";
+      ctx.lineJoin = "round";
+      ctx.strokeStyle = "#000000";
+    }
+
+    function saveState() {
+      if (history.length >= maxHistory) history.shift();
+      history.push(canvas.toDataURL());
+    }
+
+    function undo() {
+      if (history.length > 1) {
+        history.pop(); // Remove current state
+        const prevState = history[history.length - 1];
+        const img = new Image();
+        img.onload = () => {
+          const rect = canvas.getBoundingClientRect();
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, rect.width, rect.height);
+          ctx.drawImage(img, 0, 0, rect.width, rect.height);
+        };
+        img.src = prevState;
+      } else {
+        clearCanvas();
+      }
+    }
+
+    function clearCanvas() {
+      const rect = canvas.getBoundingClientRect();
+      ctx.fillStyle = "#ffffff";
+      ctx.fillRect(0, 0, rect.width, rect.height);
+      history = [canvas.toDataURL()];
+      document.getElementById("statusBar").textContent = "Canvas cleared";
+    }
+
+    function getCoordinates(e) {
+      const rect = canvas.getBoundingClientRect();
+      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+      return {
+        x: clientX - rect.left,
+        y: clientY - rect.top,
+      };
+    }
+
+    function startDraw(e) {
+      isDrawing = true;
+      const { x, y } = getCoordinates(e);
+      ctx.beginPath();
+      ctx.moveTo(x, y);
+    }
+
+    function draw(e) {
+      if (!isDrawing) return;
+      e.preventDefault();
+      const { x, y } = getCoordinates(e);
+      ctx.lineTo(x, y);
+      ctx.stroke();
+    }
+
+    function stopDraw() {
+      if (isDrawing) {
+        isDrawing = false;
+        ctx.closePath();
+        saveState();
+      }
+    }
+
+    // Touch & Mouse Event Listeners
+    canvas.addEventListener("touchstart", startDraw, { passive: false });
+    canvas.addEventListener("touchmove", draw, { passive: false });
+    canvas.addEventListener("touchend", stopDraw);
+    canvas.addEventListener("mousedown", startDraw);
+    canvas.addEventListener("mousemove", draw);
+    canvas.addEventListener("mouseup", stopDraw);
+    canvas.addEventListener("mouseleave", stopDraw);
+
+    document.getElementById("clearBtn").addEventListener("click", clearCanvas);
+    document.getElementById("undoBtn").addEventListener("click", undo);
+
+    // --- Image Upload & Camera Integration ---
+    function handleImageFile(file) {
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const rect = canvas.getBoundingClientRect();
+          ctx.fillStyle = "#ffffff";
+          ctx.fillRect(0, 0, rect.width, rect.height);
+
+          // Calculate aspect ratio fit
+          const hRatio = rect.width / img.width;
+          const vRatio = rect.height / img.height;
+          const ratio = Math.min(hRatio, vRatio);
+          const centerShiftX = (rect.width - img.width * ratio) / 2;
+          const centerShiftY = (rect.height - img.height * ratio) / 2;
+
+          ctx.drawImage(
+            img,
+            0,
+            0,
+            img.width,
+            img.height,
+            centerShiftX,
+            centerShiftY,
+            img.width * ratio,
+            img.height * ratio
+          );
+          saveState();
+          document.getElementById("statusBar").textContent = "Image loaded on canvas";
+        };
+        img.src = event.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    document.getElementById("cameraUpload").addEventListener("change", (e) => {
+      handleImageFile(e.target.files[0]);
+    });
+    document.getElementById("fileUpload").addEventListener("change", (e) => {
+      handleImageFile(e.target.files[0]);
+    });
+
+    // --- API Key Storage ---
+    const apiKeyInput = document.getElementById("apiKey");
+    const savedKey = localStorage.getItem("gemini_api_key");
+    if (savedKey) {
+      apiKeyInput.value = savedKey;
+    }
+
+    document.getElementById("saveKeyBtn").addEventListener("click", () => {
+      const key = apiKeyInput.value.trim();
+      if (key) {
+        localStorage.setItem("gemini_api_key", key);
+        document.getElementById("statusBar").textContent = "API key saved locally";
+      } else {
+        localStorage.removeItem("gemini_api_key");
+        document.getElementById("statusBar").textContent = "API key removed";
+      }
+    });
+
+    // --- LaTeX Rendering ---
+    function renderLatex(latexString) {
+      const previewArea = document.getElementById("previewArea");
+      const rawTextarea = document.getElementById("rawLatex");
+      rawTextarea.value = latexString;
+
+      // Clean display delimiters for KaTeX rendering
+      let cleanMath = latexString.trim();
+      cleanMath = cleanMath.replace(/^\\\[/, "").replace(/\\\]$/, "");
+      cleanMath = cleanMath.replace(/^\$\$/, "").replace(/\$\$$/, "");
+      cleanMath = cleanMath.replace(/^\\begin{equation\*?}/, "").replace(/\\end{equation\*?}$/, "");
+
+      try {
+        katex.render(cleanMath, previewArea, {
+          displayMode: true,
+          throwOnError: false,
+        });
+      } catch (err) {
+        previewArea.textContent = latexString;
+      }
+    }
+
+    // --- Gemini 1.5 Flash API Call ---
+    async function convertToLatex() {
+      const apiKey = apiKeyInput.value.trim() || localStorage.getItem("gemini_api_key");
+      const statusBar = document.getElementById("statusBar");
+
+      if (!apiKey) {
+        statusBar.textContent = "Please provide a Google AI Studio API key.";
+        apiKeyInput.focus();
+        return;
+      }
+
+      statusBar.textContent = "Transcribing with Gemini 1.5 Flash...";
+      const convertBtn = document.getElementById("convertBtn");
+      convertBtn.disabled = true;
+
+      try {
+        // Extract base64 image data without data URI prefix
+        const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
+
+        const promptText = 
+          "You are an expert LaTeX transcription system specializing in advanced mathematics, physics, and chemistry.\n" +
+          "Task: Transcribe all handwritten or printed mathematical and physical formulas from the provided image into clean, standard LaTeX code.\n" +
+          "Rules:\n" +
+          "1. Output ONLY the LaTeX code. Do NOT wrap in markdown code fences (no ```latex or ```).\n" +
+          "2. Do NOT add conversational replies, commentary, or greetings.\n" +
+          "3. Use standard packages such as amsmath, amssymb, and physics.\n" +
+          "4. For multi-line equations or derivations, use the \\begin{align*} ... \\end{align*} environment.\n" +
+          "5. For single formulas, write the raw math expression or standard equation format without excess whitespace.";
+
+        const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${apiKey}`;
+
+        const payload = {
+          contents: [
+            {
+              role: "user",
+              parts: [
+                { text: promptText },
+                {
+                  inline_data: {
+                    mime_type: "image/png",
+                    data: base64Data,
+                  },
+                },
+              ],
+            },
+          ],
+          generationConfig: {
+            temperature: 0.1,
+          },
+        };
+
+        const response = await fetch(endpoint, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          const errData = await response.json();
+          throw new Error(errData.error?.message || `HTTP ${response.status}`);
+        }
+
+        const data = await response.json();
+        let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+
+        // Strip accidental markdown fences if returned
+        rawText = rawText.replace(/```latex/gi, "").replace(/```/g, "").trim();
+
+        if (rawText) {
+          renderLatex(rawText);
+          statusBar.textContent = "Conversion complete.";
+        } else {
+          statusBar.textContent = "No formula detected. Please redraw clearly.";
+        }
+      } catch (error) {
+        statusBar.textContent = `Error: ${error.message}`;
+      } finally {
+        convertBtn.disabled = false;
+      }
+    }
+
+    document.getElementById("convertBtn").addEventListener("click", convertToLatex);
+
+    // --- Copy Button ---
+    document.getElementById("copyBtn").addEventListener("click", async () => {
+      const rawText = document.getElementById("rawLatex").value;
+      if (!rawText) return;
+
+      try {
+        await navigator.clipboard.writeText(rawText);
+        const copyBtn = document.getElementById("copyBtn");
+        const originalText = copyBtn.textContent;
+        copyBtn.textContent = "Copied!";
+        setTimeout(() => {
+          copyBtn.textContent = originalText;
+        }, 1800);
+      } catch (err) {
+        document.getElementById("statusBar").textContent = "Clipboard access denied.";
+      }
+    });
+
+    // Initialize layout
+    window.addEventListener("load", resizeCanvas);
+    window.addEventListener("resize", resizeCanvas);
+  </script>
+</body>
+</html>
