@@ -1,400 +1,328 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <title>Math & Physics LaTeX Converter</title>
-  
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css" />
-  <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
-
-  <style>
-    :root {
-      --bg: #0f172a;
-      --card-bg: #1e293b;
-      --border: #334155;
-      --text: #f8fafc;
-      --text-muted: #94a3b8;
-      --primary: #3b82f6;
-      --primary-hover: #2563eb;
-      --danger: #ef4444;
-      --success: #10b981;
-      --canvas-bg: #ffffff;
-    }
-
-    * {
-      box-sizing: border-box;
-      margin: 0;
-      padding: 0;
-      -webkit-tap-highlight-color: transparent;
-    }
-
-    body {
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
-      background: var(--bg);
-      color: var(--text);
-      padding: 12px;
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      min-height: 100vh;
-    }
-
-    .container {
-      width: 100%;
-      max-width: 520px;
-      display: flex;
-      flex-direction: column;
-      gap: 12px;
-    }
-
-    header {
-      text-align: center;
-      padding: 6px 0;
-    }
-
-    header h1 {
-      font-size: 1.25rem;
-      font-weight: 700;
-    }
-
-    header p {
-      font-size: 0.8rem;
-      color: var(--text-muted);
-      margin-top: 2px;
-    }
-
-    .card {
-      background: var(--card-bg);
-      border: 1px solid var(--border);
-      border-radius: 12px;
-      padding: 12px;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
-    }
-
-    .api-section {
-      display: flex;
-      flex-direction: column;
-      gap: 6px;
-    }
-
-    .api-section label {
-      font-size: 0.75rem;
-      color: var(--text-muted);
-      font-weight: 600;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
-    }
-
-    .api-input-row {
-      display: flex;
-      gap: 8px;
-    }
-
-    input[type="password"],
-    input[type="text"] {
-      flex: 1;
-      background: #0f172a;
-      border: 1px solid var(--border);
-      border-radius: 8px;
-      padding: 8px 12px;
-      color: var(--text);
-      font-size: 0.85rem;
-      outline: none;
-    }
-
-    input:focus {
-      border-color: var(--primary);
-    }
-
-    .canvas-container {
-      position: relative;
-      width: 100%;
-      aspect-ratio: 4 / 3;
-      background: var(--canvas-bg);
-      border-radius: 10px;
-      overflow: hidden;
-      touch-action: none;
-    }
-
-    canvas {
-      width: 100%;
-      height: 100%;
-      display: block;
-      cursor: crosshair;
-    }
-
-    .eraser-indicator {
-      position: absolute;
-      width: 24px;
-      height: 24px;
-      border: 2px dashed #ef4444;
-      background: rgba(239, 68, 68, 0.15);
-      border-radius: 50%;
-      pointer-events: none;
-      transform: translate(-50%, -50%);
-      display: none;
-      z-index: 10;
-    }
-
-    .tool-selector {
-      display: flex;
-      gap: 6px;
-      margin-top: 10px;
-    }
-
-    .tool-btn {
-      flex: 1;
-      padding: 8px 4px;
-      font-size: 0.78rem;
-      font-weight: 600;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: #0f172a;
-      color: var(--text-muted);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 5px;
-      transition: all 0.15s ease;
-    }
-
-    .tool-btn.active {
-      background: var(--primary);
-      border-color: var(--primary);
-      color: #ffffff;
-      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
-    }
-
-    .toolbar {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
-      margin-top: 8px;
-    }
-
-    .btn {
-      flex: 1;
-      min-width: 65px;
-      padding: 8px 10px;
-      font-size: 0.82rem;
-      font-weight: 600;
-      border-radius: 8px;
-      border: 1px solid var(--border);
-      background: #334155;
-      color: var(--text);
-      cursor: pointer;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: background 0.15s ease;
-    }
-
-    .btn:active {
-      transform: scale(0.98);
-    }
-
-    .btn-primary {
-      background: var(--primary);
-      border-color: var(--primary);
-      flex: 2;
-    }
-
-    .btn-primary:hover {
-      background: var(--primary-hover);
-    }
-
-    .btn-danger {
-      color: #fca5a5;
-    }
-
-    .btn-success {
-      background: var(--success);
-      border-color: var(--success);
-    }
-
-    .file-input {
-      display: none;
-    }
-
-    .status-bar {
-      font-size: 0.8rem;
-      text-align: center;
-      min-height: 1.2rem;
-      color: var(--text-muted);
-      margin-top: 6px;
-    }
-
-    .output-section {
-      display: flex;
-      flex-direction: column;
-      gap: 10px;
-    }
-
-    .output-header {
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-    }
-
-    .output-title {
-      font-size: 0.8rem;
-      font-weight: 600;
-      color: var(--text-muted);
-      text-transform: uppercase;
-    }
-
-    .preview-box {
-      background: #ffffff;
-      color: #0f172a;
-      padding: 14px;
-      border-radius: 8px;
-      min-height: 70px;
-      overflow-x: auto;
-      font-size: 1.1rem;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-    }
-
-    textarea.latex-raw {
-      width: 100%;
-      height: 90px;
-      background: #0f172a;
-      border: 1px solid var(--border);
-      color: #38bdf8;
-      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
-      font-size: 0.85rem;
-      border-radius: 8px;
-      padding: 8px;
-      resize: vertical;
-      outline: none;
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Math & Physics LaTeX Converter</title>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.css">
+    <script defer src="https://cdn.jsdelivr.net/npm/katex@0.16.8/dist/katex.min.js"></script>
+    <style>
+        :root {
+            --bg-color: #f7fafc;
+            --card-bg: #ffffff;
+            --primary: #3182ce;
+            --primary-hover: #2b6cb0;
+            --danger: #e53e3e;
+            --text: #2d3748;
+            --border: #e2e8f0;
+        }
+        * { box-sizing: border-box; touch-action: manipulation; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text);
+            margin: 0; padding: 12px;
+            display: flex; flex-direction: column; align-items: center;
+        }
+        .container { width: 100%; max-width: 600px; display: flex; flex-direction: column; gap: 12px; }
+        .card { background: var(--card-bg); border-radius: 8px; padding: 12px; border: 1px solid var(--border); box-shadow: 0 1px 3px rgba(0,0,0,0.05); }
+        .row { display: flex; gap: 8px; align-items: center; }
+        input[type="text"] { flex: 1; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 14px; }
+        button {
+            background-color: var(--primary); color: white; border: none; padding: 8px 14px;
+            border-radius: 6px; font-size: 14px; font-weight: 600; cursor: pointer; transition: background 0.2s;
+        }
+        button:disabled { background-color: #a0aec0; cursor: not-allowed; }
+        .toolbar { display: flex; gap: 6px; flex-wrap: wrap; margin-bottom: 8px; }
+        .btn-tool { background-color: #edf2f7; color: var(--text); border: 1px solid var(--border); padding: 6px 10px; font-size: 12px; }
+        .btn-tool.active { background-color: var(--primary); color: white; border-color: var(--primary); }
+        canvas { border: 1px solid var(--border); border-radius: 6px; background: white; touch-action: none; width: 100%; height: 260px; }
+        .output-box { min-height: 48px; padding: 10px; background: #edf2f7; border-radius: 6px; font-family: monospace; font-size: 13px; word-break: break-all; }
+        #renderedMath { min-height: 48px; padding: 10px; display: flex; justify-content: center; align-items: center; overflow-x: auto; }
+    </style>
 </head>
 <body>
-
-  <div class="container">
-    <header>
-      <h1>Math & Physics to LaTeX</h1>
-      <p>Draw or upload equations to convert using Gemini</p>
-    </header>
-
-    <div class="card api-section">
-      <label for="apiKey">Google AI Studio API Key</label>
-      <div class="api-input-row">
-        <input type="password" id="apiKey" placeholder="Paste your API key here..." autocomplete="off" />
-        <button class="btn" id="saveKeyBtn">Save</button>
-      </div>
-    </div>
-
+<div class="container">
     <div class="card">
-      <div class="canvas-container" id="canvasContainer">
+        <div class="row">
+            <input type="text" id="apiKeyInput" placeholder="Enter Gemini API Key">
+            <button onclick="saveApiKey()">Save</button>
+        </div>
+    </div>
+    <div class="card">
+        <div class="toolbar">
+            <button class="btn-tool active" id="btnPen" onclick="setMode('pen')">Pen</button>
+            <button class="btn-tool" id="btnAreaEraser" onclick="setMode('area')">Area Eraser</button>
+            <button class="btn-tool" id="btnStrokeEraser" onclick="setMode('stroke')">Stroke Eraser</button>
+            <button class="btn-tool" onclick="clearCanvas()">Clear</button>
+            <input type="file" id="fileInput" accept="image/*" capture="environment" style="display:none;" onchange="handleFileUpload(event)">
+            <button class="btn-tool" onclick="document.getElementById('fileInput').click()">Upload / Camera</button>
+        </div>
         <canvas id="paintCanvas"></canvas>
-        <div class="eraser-indicator" id="eraserIndicator"></div>
-      </div>
-
-      <div class="tool-selector">
-        <button class="tool-btn active" id="penTool" data-mode="pen">✏️ Pen</button>
-        <button class="tool-btn" id="areaEraserTool" data-mode="area">🧹 Area Eraser</button>
-        <button class="tool-btn" id="strokeEraserTool" data-mode="stroke">⚡ Stroke Eraser</button>
-      </div>
-
-      <div class="toolbar">
-        <button class="btn btn-danger" id="clearBtn">Clear</button>
-        <button class="btn" id="undoBtn">Undo</button>
-        <label class="btn" for="cameraUpload">
-          📷 Photo
-          <input type="file" id="cameraUpload" class="file-input" accept="image/*" capture="environment" />
-        </label>
-        <label class="btn" for="fileUpload">
-          📁 Upload
-          <input type="file" id="fileUpload" class="file-input" accept="image/*" />
-        </label>
-      </div>
-
-      <div class="toolbar" style="margin-top: 8px;">
-        <button class="btn btn-primary" id="convertBtn">⚡ Convert to LaTeX</button>
-      </div>
-
-      <div class="status-bar" id="statusBar">Ready</div>
+        <button id="convertBtn" style="width:100%; margin-top:8px; padding:12px;" onclick="processImage()">Convert to LaTeX</button>
     </div>
-
-    <div class="card output-section" id="outputCard">
-      <div class="output-header">
-        <span class="output-title">Rendered Preview</span>
-        <button class="btn btn-success" id="copyBtn" style="padding: 4px 10px; font-size: 0.75rem;">Copy LaTeX</button>
-      </div>
-
-      <div class="preview-box" id="previewArea">
-        <span style="color: #94a3b8; font-size: 0.9rem;">Equation preview will appear here</span>
-      </div>
-
-      <label class="output-title">Raw LaTeX Code</label>
-      <textarea id="rawLatex" class="latex-raw" readonly placeholder="LaTeX output will appear here..."></textarea>
+    <div class="card">
+        <h3>LaTeX Output</h3>
+        <div class="output-box" id="latexOutput">LaTeX string will appear here...</div>
+        <h3>Rendered Output</h3>
+        <div id="renderedMath"></div>
     </div>
-  </div>
+</div>
 
-  <script>
-    const canvas = document.getElementById("paintCanvas");
-    const ctx = canvas.getContext("2d");
-    const eraserIndicator = document.getElementById("eraserIndicator");
-    const statusBar = document.getElementById("statusBar");
+<script>
+let canvas = document.getElementById('paintCanvas');
+let ctx = canvas.getContext('2d');
+let currentMode = 'pen';
+let strokes = [];
+let currentStroke = [];
+let isDrawing = false;
 
-    let currentMode = "pen";
-    let isInteracting = false;
-    let strokes = [];
-    let currentStroke = null;
-    let bgImage = null;
-    let history = [];
-    const maxHistory = 20;
+function initCanvas() {
+    let rect = canvas.getBoundingClientRect();
+    let dpr = window.devicePixelRatio || 1;
+    canvas.width = rect.width * dpr;
+    canvas.height = rect.height * dpr;
+    ctx.scale(dpr, dpr);
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.lineWidth = 3;
+    redraw();
+}
 
-    const toolButtons = document.querySelectorAll(".tool-btn");
-    toolButtons.forEach((btn) => {
-      btn.addEventListener("click", () => {
-        toolButtons.forEach((b) => b.classList.remove("active"));
-        btn.classList.add("active");
-        currentMode = btn.dataset.mode;
-        
-        if (currentMode === "area") {
-          statusBar.textContent = "Area Eraser: Drag to erase hovered parts.";
-        } else if (currentMode === "stroke") {
-          statusBar.textContent = "Stroke Eraser: Tap any line to erase the entire stroke.";
-        } else {
-          statusBar.textContent = "Pen: Ready to draw.";
+window.onload = () => {
+    let savedKey = localStorage.getItem('gemini_api_key');
+    if(savedKey) document.getElementById('apiKeyInput').value = savedKey;
+    initCanvas();
+};
+
+function saveApiKey() {
+    let key = document.getElementById('apiKeyInput').value.trim();
+    localStorage.setItem('gemini_api_key', key);
+    alert('API Key Saved successfully.');
+}
+
+function setMode(mode) {
+    currentMode = mode;
+    document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
+    if(mode === 'pen') document.getElementById('btnPen').classList.add('active');
+    if(mode === 'area') document.getElementById('btnAreaEraser').classList.add('active');
+    if(mode === 'stroke') document.getElementById('btnStrokeEraser').classList.add('active');
+}
+
+function clearCanvas() {
+    strokes = [];
+    redraw();
+    document.getElementById('latexOutput').innerText = 'LaTeX string will appear here...';
+    document.getElementById('renderedMath').innerHTML = '';
+}
+
+function getPos(e) {
+    let rect = canvas.getBoundingClientRect();
+    let clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    let clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return { x: clientX - rect.left, y: clientY - rect.top };
+}
+
+canvas.addEventListener('pointerdown', (e) => {
+    isDrawing = true;
+    let pos = getPos(e);
+    if(currentMode === 'pen') {
+        currentStroke = [pos];
+        strokes.push(currentStroke);
+    } else if(currentMode === 'stroke') {
+        eraseStrokeAt(pos);
+    } else if(currentMode === 'area') {
+        eraseAreaAt(pos);
+    }
+    redraw();
+});
+
+canvas.addEventListener('pointermove', (e) => {
+    if(!isDrawing) return;
+    let pos = getPos(e);
+    if(currentMode === 'pen') {
+        currentStroke.push(pos);
+    } else if(currentMode === 'stroke') {
+        eraseStrokeAt(pos);
+    } else if(currentMode === 'area') {
+        eraseAreaAt(pos);
+    }
+    redraw();
+});
+
+canvas.addEventListener('pointerup', () => { isDrawing = false; });
+
+function redraw() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.strokeStyle = '#000000';
+    ctx.lineWidth = 3;
+    strokes.forEach(stroke => {
+        if(stroke.length < 1) return;
+        ctx.beginPath();
+        ctx.moveTo(stroke[0].x, stroke[0].y);
+        for(let i = 1; i < stroke.length; i++) {
+            ctx.lineTo(stroke[i].x, stroke[i].y);
         }
-      });
+        ctx.stroke();
     });
+}
 
-    function resizeCanvas() {
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+function distToSegmentSq(p, v, w) {
+    let l2 = (v.x - w.x)**2 + (v.y - w.y)**2;
+    if (l2 === 0) return (p.x - v.x)**2 + (p.y - v.y)**2;
+    let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
+    t = Math.max(0, Math.min(1, t));
+    return (p.x - (v.x + t * (w.x - v.x)))**2 + (p.y - (v.y + t * (w.y - v.y)))**2;
+}
 
-      canvas.width = rect.width * dpr;
-      canvas.height = rect.height * dpr;
+function eraseStrokeAt(pos) {
+    let threshold = 100;
+    strokes = strokes.filter(stroke => {
+        for(let i = 0; i < stroke.length - 1; i++) {
+            if(distToSegmentSq(pos, stroke[i], stroke[i+1]) < threshold) return false;
+        }
+        return true;
+    });
+}
 
-      redrawCanvas();
-      if (history.length === 0) saveState();
+function eraseAreaAt(pos) {
+    let radius = 12;
+    let rSq = radius * radius;
+    let newStrokes = [];
+    strokes.forEach(stroke => {
+        let currentSub = [];
+        stroke.forEach(pt => {
+            let dSq = (pt.x - pos.x)**2 + (pt.y - pos.y)**2;
+            if(dSq > rSq) {
+                currentSub.push(pt);
+            } else {
+                if(currentSub.length > 0) {
+                    newStrokes.push(currentSub);
+                    currentSub = [];
+                }
+            }
+        });
+        if(currentSub.length > 0) newStrokes.push(currentSub);
+    });
+    strokes = newStrokes;
+}
+
+function handleFileUpload(e) {
+    let file = e.target.files[0];
+    if(!file) return;
+    let img = new Image();
+    img.onload = () => {
+        strokes = [];
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        ctx.drawImage(img, 0, 0, canvas.width / (window.devicePixelRatio||1), canvas.height / (window.devicePixelRatio||1));
+    };
+    img.src = URL.createObjectURL(file);
+}
+
+async function copyToClipboard(text) {
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch(err) {
+        let textArea = document.createElement("textarea");
+        textArea.value = text;
+        document.body.appendChild(textArea);
+        textArea.select();
+        document.execCommand("copy");
+        document.body.removeChild(textArea);
+    }
+}
+
+function getCompressedImageData() {
+    let targetWidth = 400;
+    let scale = targetWidth / canvas.width;
+    let targetHeight = Math.round(canvas.height * scale);
+
+    let tempCanvas = document.createElement('canvas');
+    tempCanvas.width = targetWidth;
+    tempCanvas.height = targetHeight;
+    let tCtx = tempCanvas.getContext('2d');
+
+    // Fill white background to avoid black background artifacts in JPEG
+    tCtx.fillStyle = '#FFFFFF';
+    tCtx.fillRect(0, 0, targetWidth, targetHeight);
+
+    // Draw downscaled representation
+    tCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
+
+    let dataUrl = tempCanvas.toDataURL('image/jpeg', 0.7);
+    return dataUrl.split(',')[1];
+}
+
+async function processImage() {
+    let key = localStorage.getItem('gemini_api_key');
+    if(!key) { 
+        alert('Please save a valid Gemini API Key first.'); 
+        return; 
     }
 
-    function redrawCanvas() {
-      const rect = canvas.parentElement.getBoundingClientRect();
-      const dpr = window.devicePixelRatio || 1;
+    let btn = document.getElementById('convertBtn');
+    btn.disabled = true;
+    btn.innerText = 'Converting...';
 
-      ctx.save();
-      ctx.setTransform(1, 0, 0, 1, 0, 0);
-      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    let base64Data = getCompressedImageData();
+    let payload = {
+        contents: [{
+            parts: [
+                { text: "Convert the mathematical or physics equation in this image into clear, raw LaTeX code. Return ONLY the raw LaTeX string. Do not wrap in markdown code blocks." },
+                { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+            ]
+        }]
+    };
 
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, canvas.width, canvas.height);
+    try {
+        let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${key}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
 
-      ctx.scale(dpr, dpr);
+        if(response.status === 429) {
+            let errText = await response.text();
+            let match = errText.match(/retry in ([\d\.]+)s/i) || errText.match(/retry after (\d+(\.\d+)?)s/i);
+            let waitSecs = match ? Math.ceil(parseFloat(match[1])) : 30;
 
-      if (bgImage) {
-        const hRatio = rect.width / bgImage.width;
-        const vRatio = rect.height / bgImage.height;
+            for(let s = waitSecs; s > 0; s--) {
+                btn.innerText = `Quota Limit: Cooldown (${s}s)`;
+                await new Promise(r => setTimeout(r, 1000));
+            }
+            btn.innerText = 'Convert to LaTeX';
+            btn.disabled = false;
+            return;
+        }
+
+        if(!response.ok) {
+            throw new Error(`HTTP Error ${response.status}`);
+        }
+
+        let data = await response.json();
+        let latex = data.candidates[0].content.parts[0].text.trim();
+        latex = latex.replace(/^```latex\n?/, '').replace(/^```\n?/, '').replace(/\n?```$/, '');
+
+        document.getElementById('latexOutput').innerText = latex;
+        katex.render(latex, document.getElementById('renderedMath'), { throwOnError: false });
+
+        await copyToClipboard(latex);
+        btn.innerText = 'Copied to Clipboard!';
+        setTimeout(() => { 
+            btn.innerText = 'Convert to LaTeX'; 
+            btn.disabled = false; 
+        }, 2000);
+
+    } catch(err) {
+        console.error(err);
+        alert('Processing failed. Please verify your connection or API Key.');
+        btn.innerText = 'Convert to LaTeX';
+        btn.disabled = false;
+    }
+}
+</script>
+</body>
+</html>t / bgImage.height;
         const ratio = Math.min(hRatio, vRatio);
         const shiftX = (rect.width - bgImage.width * ratio) / 2;
         const shiftY = (rect.height - bgImage.height * ratio) / 2;
