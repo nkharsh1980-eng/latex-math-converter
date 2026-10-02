@@ -124,6 +124,51 @@
       cursor: crosshair;
     }
 
+    /* Eraser indicator circle */
+    .eraser-indicator {
+      position: absolute;
+      width: 24px;
+      height: 24px;
+      border: 2px dashed #ef4444;
+      background: rgba(239, 68, 68, 0.15);
+      border-radius: 50%;
+      pointer-events: none;
+      transform: translate(-50%, -50%);
+      display: none;
+      z-index: 10;
+    }
+
+    /* Tool Selector Buttons */
+    .tool-selector {
+      display: flex;
+      gap: 6px;
+      margin-top: 10px;
+    }
+
+    .tool-btn {
+      flex: 1;
+      padding: 8px 4px;
+      font-size: 0.78rem;
+      font-weight: 600;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      background: #0f172a;
+      color: var(--text-muted);
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+      transition: all 0.15s ease;
+    }
+
+    .tool-btn.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #ffffff;
+      box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.35);
+    }
+
     .toolbar {
       display: flex;
       flex-wrap: wrap;
@@ -133,9 +178,9 @@
 
     .btn {
       flex: 1;
-      min-width: 70px;
-      padding: 9px 12px;
-      font-size: 0.85rem;
+      min-width: 65px;
+      padding: 8px 10px;
+      font-size: 0.82rem;
       font-weight: 600;
       border-radius: 8px;
       border: 1px solid var(--border);
@@ -181,6 +226,7 @@
       text-align: center;
       min-height: 1.2rem;
       color: var(--text-muted);
+      margin-top: 6px;
     }
 
     .output-section {
@@ -247,10 +293,19 @@
     </div>
 
     <div class="card">
-      <div class="canvas-container">
+      <div class="canvas-container" id="canvasContainer">
         <canvas id="paintCanvas"></canvas>
+        <div class="eraser-indicator" id="eraserIndicator"></div>
       </div>
 
+      <!-- Tool Switcher -->
+      <div class="tool-selector">
+        <button class="tool-btn active" id="penTool" data-mode="pen">✏️ Pen</button>
+        <button class="tool-btn" id="areaEraserTool" data-mode="area">🧹 Area Eraser</button>
+        <button class="tool-btn" id="strokeEraserTool" data-mode="stroke">⚡ Stroke Eraser</button>
+      </div>
+
+      <!-- Action Buttons -->
       <div class="toolbar">
         <button class="btn btn-danger" id="clearBtn">Clear</button>
         <button class="btn" id="undoBtn">Undo</button>
@@ -289,69 +344,133 @@
   <script>
     const canvas = document.getElementById("paintCanvas");
     const ctx = canvas.getContext("2d");
-    let isDrawing = false;
+    const eraserIndicator = document.getElementById("eraserIndicator");
+
+    let currentMode = "pen"; // 'pen', 'area', or 'stroke'
+    let isInteracting = false;
+    let strokes = []; // Array of { points: [{x, y}], width: number, color: string }
+    let currentStroke = null;
+    let bgImage = null;
     let history = [];
-    const maxHistory = 15;
+    const maxHistory = 20;
+
+    // Tool switching
+    const toolButtons = document.querySelectorAll(".tool-btn");
+    toolButtons.forEach((btn) => {
+      btn.addEventListener("click", () => {
+        toolButtons.forEach((b) => b.classList.remove("active"));
+        btn.classList.add("active");
+        currentMode = btn.dataset.mode;
+        
+        if (currentMode === "area") {
+          document.getElementById("statusBar").textContent = "Area Eraser: Drag to erase hovered parts.";
+        } else if (currentMode === "stroke") {
+          document.getElementById("statusBar").textContent = "Stroke Eraser: Tap any line to erase the entire stroke.";
+        } else {
+          document.getElementById("statusBar").textContent = "Pen: Ready to draw.";
+        }
+      });
+    });
 
     function resizeCanvas() {
       const rect = canvas.parentElement.getBoundingClientRect();
       const dpr = window.devicePixelRatio || 1;
 
-      let tempCanvas = null;
-      if (canvas.width > 0 && canvas.height > 0) {
-        tempCanvas = document.createElement("canvas");
-        tempCanvas.width = canvas.width;
-        tempCanvas.height = canvas.height;
-        tempCanvas.getContext("2d").drawImage(canvas, 0, 0);
-      }
-
       canvas.width = rect.width * dpr;
       canvas.height = rect.height * dpr;
-      ctx.scale(dpr, dpr);
+
+      redrawCanvas();
+      if (history.length === 0) saveState();
+    }
+
+    function redrawCanvas() {
+      const rect = canvas.parentElement.getBoundingClientRect();
+      const dpr = window.devicePixelRatio || 1;
+
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
 
       ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, rect.width, rect.height);
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      if (tempCanvas) {
-        ctx.drawImage(tempCanvas, 0, 0, rect.width, rect.height);
-      } else {
-        saveState();
+      ctx.scale(dpr, dpr);
+
+      // Render background photo if uploaded
+      if (bgImage) {
+        const hRatio = rect.width / bgImage.width;
+        const vRatio = rect.height / bgImage.height;
+        const ratio = Math.min(hRatio, vRatio);
+        const shiftX = (rect.width - bgImage.width * ratio) / 2;
+        const shiftY = (rect.height - bgImage.height * ratio) / 2;
+        ctx.drawImage(bgImage, 0, 0, bgImage.width, bgImage.height, shiftX, shiftY, bgImage.width * ratio, bgImage.height * ratio);
       }
 
-      ctx.lineWidth = 3.5;
+      // Render all vector strokes
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
-      ctx.strokeStyle = "#000000";
+
+      for (const stroke of strokes) {
+        const pts = stroke.points;
+        if (!pts || pts.length === 0) continue;
+
+        ctx.lineWidth = stroke.width || 3.5;
+        ctx.strokeStyle = stroke.color || "#000000";
+        ctx.fillStyle = stroke.color || "#000000";
+
+        if (pts.length === 1) {
+          ctx.beginPath();
+          ctx.arc(pts[0].x, pts[0].y, (stroke.width || 3.5) / 2, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.beginPath();
+          ctx.moveTo(pts[0].x, pts[0].y);
+          for (let i = 1; i < pts.length; i++) {
+            ctx.lineTo(pts[i].x, pts[i].y);
+          }
+          ctx.stroke();
+        }
+      }
+
+      ctx.restore();
     }
 
     function saveState() {
       if (history.length >= maxHistory) history.shift();
-      history.push(canvas.toDataURL());
+      history.push({
+        strokes: JSON.parse(JSON.stringify(strokes)),
+        bg: bgImage ? bgImage.src : null,
+      });
     }
 
     function undo() {
       if (history.length > 1) {
         history.pop();
         const prevState = history[history.length - 1];
-        const img = new Image();
-        img.onload = () => {
-          const rect = canvas.getBoundingClientRect();
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, rect.width, rect.height);
-          ctx.drawImage(img, 0, 0, rect.width, rect.height);
-        };
-        img.src = prevState;
+        strokes = JSON.parse(JSON.stringify(prevState.strokes));
+        if (prevState.bg) {
+          const img = new Image();
+          img.onload = () => {
+            bgImage = img;
+            redrawCanvas();
+          };
+          img.src = prevState.bg;
+        } else {
+          bgImage = null;
+          redrawCanvas();
+        }
+        document.getElementById("statusBar").textContent = "Undo applied.";
       } else {
         clearCanvas();
       }
     }
 
     function clearCanvas() {
-      const rect = canvas.getBoundingClientRect();
-      ctx.fillStyle = "#ffffff";
-      ctx.fillRect(0, 0, rect.width, rect.height);
-      history = [canvas.toDataURL()];
-      document.getElementById("statusBar").textContent = "Canvas cleared";
+      strokes = [];
+      bgImage = null;
+      redrawCanvas();
+      history = [{ strokes: [], bg: null }];
+      document.getElementById("statusBar").textContent = "Canvas cleared.";
     }
 
     function getCoordinates(e) {
@@ -364,36 +483,181 @@
       };
     }
 
-    function startDraw(e) {
-      isDrawing = true;
-      const { x, y } = getCoordinates(e);
-      ctx.beginPath();
-      ctx.moveTo(x, y);
+    // Math helper: distance from point P to line segment AB squared
+    function distToSegmentSq(p, a, b) {
+      const dx = b.x - a.x;
+      const dy = b.y - a.y;
+      if (dx === 0 && dy === 0) {
+        return (p.x - a.x) ** 2 + (p.y - a.y) ** 2;
+      }
+      const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
+      const cx = a.x + t * dx;
+      const cy = a.y + t * dy;
+      return (p.x - cx) ** 2 + (p.y - cy) ** 2;
     }
 
-    function draw(e) {
-      if (!isDrawing) return;
-      e.preventDefault();
-      const { x, y } = getCoordinates(e);
-      ctx.lineTo(x, y);
-      ctx.stroke();
+    // Mode 2: Stroke Eraser (Deletes entire continuous stroke on touch)
+    function applyStrokeEraser(x, y) {
+      const thresholdSq = 14 * 14;
+      const p = { x, y };
+      let changed = false;
+
+      strokes = strokes.filter((stroke) => {
+        const pts = stroke.points;
+        if (!pts || pts.length === 0) return false;
+
+        let hit = false;
+        if (pts.length === 1) {
+          hit = (pts[0].x - p.x) ** 2 + (pts[0].y - p.y) ** 2 <= thresholdSq;
+        } else {
+          for (let i = 0; i < pts.length - 1; i++) {
+            if (distToSegmentSq(p, pts[i], pts[i + 1]) <= thresholdSq) {
+              hit = true;
+              break;
+            }
+          }
+        }
+
+        if (hit) {
+          changed = true;
+          return false; // remove this stroke
+        }
+        return true;
+      });
+
+      if (changed) redrawCanvas();
+      return changed;
     }
 
-    function stopDraw() {
-      if (isDrawing) {
-        isDrawing = false;
-        ctx.closePath();
-        saveState();
+    // Mode 1: Area Eraser (Erases only where hovered/touched by splitting strokes)
+    function applyAreaEraser(ex, ey, radius = 12) {
+      const rSq = radius * radius;
+      const newStrokes = [];
+      let changed = false;
+
+      for (const stroke of strokes) {
+        const pts = stroke.points;
+        if (!pts || pts.length === 0) continue;
+
+        if (pts.length === 1) {
+          const dSq = (pts[0].x - ex) ** 2 + (pts[0].y - ey) ** 2;
+          if (dSq > rSq) {
+            newStrokes.append ? newStrokes.append(stroke) : newStrokes.push(stroke);
+          } else {
+            changed = true;
+          }
+          continue;
+        }
+
+        // Interpolate points along the stroke to ensure no segment skips
+        const dense = [];
+        for (let i = 0; i < pts.length; i++) {
+          if (i === 0) {
+            dense.push(pts[0]);
+          } else {
+            const p1 = dense[dense.length - 1];
+            const p2 = pts[i];
+            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
+            const step = 3.0;
+            if (dist > step) {
+              const count = Math.floor(dist / step);
+              for (let k = 1; k <= count; k++) {
+                const t = k / (count + 1);
+                dense.push({ x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) });
+              }
+            }
+            dense.push(p2);
+          }
+        }
+
+        // Split stroke into sub-segments that fall outside the eraser circle
+        let currentSeg = [];
+        let modified = false;
+
+        for (const p of dense) {
+          const dSq = (p.x - ex) ** 2 + (p.y - ey) ** 2;
+          if (dSq > rSq) {
+            currentSeg.push(p);
+          } else {
+            modified = true;
+            if (currentSeg.length >= 2) {
+              newStrokes.push({ points: currentSeg, width: stroke.width, color: stroke.color });
+            }
+            currentSeg = [];
+          }
+        }
+
+        if (currentSeg.length >= 2) {
+          newStrokes.push({ points: currentSeg, width: stroke.width, color: stroke.color });
+        }
+
+        if (modified) changed = true;
+      }
+
+      if (changed) {
+        strokes = newStrokes;
+        redrawCanvas();
+      }
+      return changed;
+    }
+
+    // Touch & Mouse Handling
+    function handleStart(e) {
+      isInteracting = true;
+      const { x, y } = getCoordinates(e);
+
+      if (currentMode === "pen") {
+        currentStroke = { points: [{ x, y }], width: 3.5, color: "#000000" };
+        strokes.push(currentStroke);
+        redrawCanvas();
+      } else if (currentMode === "stroke") {
+        applyStrokeEraser(x, y);
+      } else if (currentMode === "area") {
+        applyAreaEraser(x, y);
+        showEraserIndicator(x, y);
       }
     }
 
-    canvas.addEventListener("touchstart", startDraw, { passive: false });
-    canvas.addEventListener("touchmove", draw, { passive: false });
-    canvas.addEventListener("touchend", stopDraw);
-    canvas.addEventListener("mousedown", startDraw);
-    canvas.addEventListener("mousemove", draw);
-    canvas.addEventListener("mouseup", stopDraw);
-    canvas.addEventListener("mouseleave", stopDraw);
+    function handleMove(e) {
+      if (!isInteracting && currentMode !== "area") return;
+      e.preventDefault();
+      const { x, y } = getCoordinates(e);
+
+      if (currentMode === "pen" && isInteracting) {
+        currentStroke.points.push({ x, y });
+        redrawCanvas();
+      } else if (currentMode === "stroke" && isInteracting) {
+        applyStrokeEraser(x, y);
+      } else if (currentMode === "area") {
+        showEraserIndicator(x, y);
+        if (isInteracting) {
+          applyAreaEraser(x, y);
+        }
+      }
+    }
+
+    function handleEnd() {
+      if (isInteracting) {
+        isInteracting = false;
+        currentStroke = null;
+        saveState();
+      }
+      eraserIndicator.style.display = "none";
+    }
+
+    function showEraserIndicator(x, y) {
+      eraserIndicator.style.left = `${x}px`;
+      eraserIndicator.style.top = `${y}px`;
+      eraserIndicator.style.display = "block";
+    }
+
+    canvas.addEventListener("touchstart", handleStart, { passive: false });
+    canvas.addEventListener("touchmove", handleMove, { passive: false });
+    canvas.addEventListener("touchend", handleEnd);
+    canvas.addEventListener("mousedown", handleStart);
+    canvas.addEventListener("mousemove", handleMove);
+    canvas.addEventListener("mouseup", handleEnd);
+    canvas.addEventListener("mouseleave", handleEnd);
 
     document.getElementById("clearBtn").addEventListener("click", clearCanvas);
     document.getElementById("undoBtn").addEventListener("click", undo);
@@ -404,29 +668,11 @@
       reader.onload = (event) => {
         const img = new Image();
         img.onload = () => {
-          const rect = canvas.getBoundingClientRect();
-          ctx.fillStyle = "#ffffff";
-          ctx.fillRect(0, 0, rect.width, rect.height);
-
-          const hRatio = rect.width / img.width;
-          const vRatio = rect.height / img.height;
-          const ratio = Math.min(hRatio, vRatio);
-          const centerShiftX = (rect.width - img.width * ratio) / 2;
-          const centerShiftY = (rect.height - img.height * ratio) / 2;
-
-          ctx.drawImage(
-            img,
-            0,
-            0,
-            img.width,
-            img.height,
-            centerShiftX,
-            centerShiftY,
-            img.width * ratio,
-            img.height * ratio
-          );
+          bgImage = img;
+          strokes = [];
+          redrawCanvas();
           saveState();
-          document.getElementById("statusBar").textContent = "Image loaded on canvas";
+          document.getElementById("statusBar").textContent = "Image loaded on canvas.";
         };
         img.src = event.target.result;
       };
@@ -442,18 +688,16 @@
 
     const apiKeyInput = document.getElementById("apiKey");
     const savedKey = localStorage.getItem("gemini_api_key");
-    if (savedKey) {
-      apiKeyInput.value = savedKey;
-    }
+    if (savedKey) apiKeyInput.value = savedKey;
 
     document.getElementById("saveKeyBtn").addEventListener("click", () => {
       const key = apiKeyInput.value.trim();
       if (key) {
         localStorage.setItem("gemini_api_key", key);
-        document.getElementById("statusBar").textContent = "API key saved locally";
+        document.getElementById("statusBar").textContent = "API key saved locally.";
       } else {
         localStorage.removeItem("gemini_api_key");
-        document.getElementById("statusBar").textContent = "API key removed";
+        document.getElementById("statusBar").textContent = "API key removed.";
       }
     });
 
@@ -536,10 +780,9 @@
           const errData = await response.json().catch(() => ({}));
           const errMsg = errData.error?.message || `HTTP ${response.status}`;
 
-          // Detect rate limit (429) and handle retry timer
           if (response.status === 429 || errMsg.includes("Quota exceeded")) {
             const match = errMsg.match(/retry in ([0-9.]+)s/i);
-            let waitSeconds = match ? Math.ceil(parseFloat(match)) : 15;
+            let waitSeconds = match && match ? Math.ceil(parseFloat(match)) : 15;
 
             const timer = setInterval(() => {
               if (waitSeconds <= 0) {
