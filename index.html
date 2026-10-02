@@ -837,22 +837,7 @@
 
     document.getElementById("convertBtn").addEventListener("click", convertToLatex);
 
-    document.getElementById("copyBtn").addEventListener("click", async () => {
-      const rawText = document.getElementById("rawLatex").value;
-      if (!rawText) return;
-
-      try {
-        await navigator.clipboard.writeText(rawText);
-        const copyBtn = document.getElementById("copyBtn");
-        const originalText = copyBtn.textContent;
-        copyBtn.textContent = "Copied!";
-        setTimeout(() => {
-          copyBtn.textContent = originalText;
-        }, 1800);
-      } catch (err) {
-        document.getElementById("statusBar").textContent = "Clipboard access denied.";
-      }
-    });
+    
 
     window.addEventListener("load", resizeCanvas);
     window.addEventListener("resize", resizeCanvas);
