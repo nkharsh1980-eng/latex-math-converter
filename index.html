@@ -91,7 +91,7 @@ function initCanvas() {
 
 window.onload = () => {
     let savedKey = localStorage.getItem('gemini_api_key');
-    if(savedKey) document.getElementById('apiKeyInput').value = savedKey;
+    if (savedKey) document.getElementById('apiKeyInput').value = savedKey;
     initCanvas();
 };
 
@@ -104,9 +104,9 @@ function saveApiKey() {
 function setMode(mode) {
     currentMode = mode;
     document.querySelectorAll('.btn-tool').forEach(b => b.classList.remove('active'));
-    if(mode === 'pen') document.getElementById('btnPen').classList.add('active');
-    if(mode === 'area') document.getElementById('btnAreaEraser').classList.add('active');
-    if(mode === 'stroke') document.getElementById('btnStrokeEraser').classList.add('active');
+    if (mode === 'pen') document.getElementById('btnPen').classList.add('active');
+    if (mode === 'area') document.getElementById('btnAreaEraser').classList.add('active');
+    if (mode === 'stroke') document.getElementById('btnStrokeEraser').classList.add('active');
 }
 
 function clearCanvas() {
@@ -126,25 +126,25 @@ function getPos(e) {
 canvas.addEventListener('pointerdown', (e) => {
     isDrawing = true;
     let pos = getPos(e);
-    if(currentMode === 'pen') {
+    if (currentMode === 'pen') {
         currentStroke = [pos];
         strokes.push(currentStroke);
-    } else if(currentMode === 'stroke') {
+    } else if (currentMode === 'stroke') {
         eraseStrokeAt(pos);
-    } else if(currentMode === 'area') {
+    } else if (currentMode === 'area') {
         eraseAreaAt(pos);
     }
     redraw();
 });
 
 canvas.addEventListener('pointermove', (e) => {
-    if(!isDrawing) return;
+    if (!isDrawing) return;
     let pos = getPos(e);
-    if(currentMode === 'pen') {
+    if (currentMode === 'pen') {
         currentStroke.push(pos);
-    } else if(currentMode === 'stroke') {
+    } else if (currentMode === 'stroke') {
         eraseStrokeAt(pos);
-    } else if(currentMode === 'area') {
+    } else if (currentMode === 'area') {
         eraseAreaAt(pos);
     }
     redraw();
@@ -157,10 +157,10 @@ function redraw() {
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 3;
     strokes.forEach(stroke => {
-        if(stroke.length < 1) return;
+        if (stroke.length < 1) return;
         ctx.beginPath();
         ctx.moveTo(stroke[0].x, stroke[0].y);
-        for(let i = 1; i < stroke.length; i++) {
+        for (let i = 1; i < stroke.length; i++) {
             ctx.lineTo(stroke[i].x, stroke[i].y);
         }
         ctx.stroke();
@@ -168,18 +168,18 @@ function redraw() {
 }
 
 function distToSegmentSq(p, v, w) {
-    let l2 = (v.x - w.x)**2 + (v.y - w.y)**2;
-    if (l2 === 0) return (p.x - v.x)**2 + (p.y - v.y)**2;
+    let l2 = (v.x - w.x) ** 2 + (v.y - w.y) ** 2;
+    if (l2 === 0) return (p.x - v.x) ** 2 + (p.y - v.y) ** 2;
     let t = ((p.x - v.x) * (w.x - v.x) + (p.y - v.y) * (w.y - v.y)) / l2;
     t = Math.max(0, Math.min(1, t));
-    return (p.x - (v.x + t * (w.x - v.x)))**2 + (p.y - (v.y + t * (w.y - v.y)))**2;
+    return (p.x - (v.x + t * (w.x - v.x))) ** 2 + (p.y - (v.y + t * (w.y - v.y))) ** 2;
 }
 
 function eraseStrokeAt(pos) {
     let threshold = 100;
     strokes = strokes.filter(stroke => {
-        for(let i = 0; i < stroke.length - 1; i++) {
-            if(distToSegmentSq(pos, stroke[i], stroke[i+1]) < threshold) return false;
+        for (let i = 0; i < stroke.length - 1; i++) {
+            if (distToSegmentSq(pos, stroke[i], stroke[i + 1]) < threshold) return false;
         }
         return true;
     });
@@ -192,29 +192,29 @@ function eraseAreaAt(pos) {
     strokes.forEach(stroke => {
         let currentSub = [];
         stroke.forEach(pt => {
-            let dSq = (pt.x - pos.x)**2 + (pt.y - pos.y)**2;
-            if(dSq > rSq) {
+            let dSq = (pt.x - pos.x) ** 2 + (pt.y - pos.y) ** 2;
+            if (dSq > rSq) {
                 currentSub.push(pt);
             } else {
-                if(currentSub.length > 0) {
+                if (currentSub.length > 0) {
                     newStrokes.push(currentSub);
                     currentSub = [];
                 }
             }
         });
-        if(currentSub.length > 0) newStrokes.push(currentSub);
+        if (currentSub.length > 0) newStrokes.push(currentSub);
     });
     strokes = newStrokes;
 }
 
 function handleFileUpload(e) {
     let file = e.target.files[0];
-    if(!file) return;
+    if (!file) return;
     let img = new Image();
     img.onload = () => {
         strokes = [];
         ctx.clearRect(0, 0, canvas.width, canvas.height);
-        ctx.drawImage(img, 0, 0, canvas.width / (window.devicePixelRatio||1), canvas.height / (window.devicePixelRatio||1));
+        ctx.drawImage(img, 0, 0, canvas.width / (window.devicePixelRatio || 1), canvas.height / (window.devicePixelRatio || 1));
     };
     img.src = URL.createObjectURL(file);
 }
@@ -222,7 +222,7 @@ function handleFileUpload(e) {
 async function copyToClipboard(text) {
     try {
         await navigator.clipboard.writeText(text);
-    } catch(err) {
+    } catch (err) {
         let textArea = document.createElement("textarea");
         textArea.value = text;
         document.body.appendChild(textArea);
@@ -242,11 +242,8 @@ function getCompressedImageData() {
     tempCanvas.height = targetHeight;
     let tCtx = tempCanvas.getContext('2d');
 
-    // Fill white background to avoid black background artifacts in JPEG
     tCtx.fillStyle = '#FFFFFF';
     tCtx.fillRect(0, 0, targetWidth, targetHeight);
-
-    // Draw downscaled representation
     tCtx.drawImage(canvas, 0, 0, targetWidth, targetHeight);
 
     let dataUrl = tempCanvas.toDataURL('image/jpeg', 0.7);
@@ -255,7 +252,7 @@ function getCompressedImageData() {
 
 async function processImage() {
     let key = localStorage.getItem('gemini_api_key');
-    if(!key) { 
+    if (!key) { 
         alert('Please save a valid Gemini API Key first.'); 
         return; 
     }
@@ -275,18 +272,18 @@ async function processImage() {
     };
 
     try {
-        let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3.5-flash-lite:generateContent?key=${key}`, {
+        let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${key}`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(payload)
         });
 
-        if(response.status === 429) {
+        if (response.status === 429) {
             let errText = await response.text();
             let match = errText.match(/retry in ([\d\.]+)s/i) || errText.match(/retry after (\d+(\.\d+)?)s/i);
             let waitSecs = match ? Math.ceil(parseFloat(match[1])) : 30;
 
-            for(let s = waitSecs; s > 0; s--) {
+            for (let s = waitSecs; s > 0; s--) {
                 btn.innerText = `Quota Limit: Cooldown (${s}s)`;
                 await new Promise(r => setTimeout(r, 1000));
             }
@@ -295,7 +292,7 @@ async function processImage() {
             return;
         }
 
-        if(!response.ok) {
+        if (!response.ok) {
             throw new Error(`HTTP Error ${response.status}`);
         }
 
@@ -313,7 +310,7 @@ async function processImage() {
             btn.disabled = false; 
         }, 2000);
 
-    } catch(err) {
+    } catch (err) {
         console.error(err);
         alert('Processing failed. Please verify your connection or API Key.');
         btn.innerText = 'Convert to LaTeX';
@@ -321,954 +318,5 @@ async function processImage() {
     }
 }
 </script>
-</body>
-</html>t / bgImage.height;
-        const ratio = Math.min(hRatio, vRatio);
-        const shiftX = (rect.width - bgImage.width * ratio) / 2;
-        const shiftY = (rect.height - bgImage.height * ratio) / 2;
-        ctx.drawImage(bgImage, 0, 0, bgImage.width, bgImage.height, shiftX, shiftY, bgImage.width * ratio, bgImage.height * ratio);
-      }
-
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      for (const stroke of strokes) {
-        const pts = stroke.points;
-        if (!pts || pts.length === 0) continue;
-
-        ctx.lineWidth = stroke.width || 3.5;
-        ctx.strokeStyle = stroke.color || "#000000";
-        ctx.fillStyle = stroke.color || "#000000";
-
-        if (pts.length === 1) {
-          ctx.beginPath();
-          ctx.arc(pts[0].x, pts[0].y, (stroke.width || 3.5) / 2, 0, Math.PI * 2);
-          ctx.fill();
-        } else {
-          ctx.beginPath();
-          ctx.moveTo(pts[0].x, pts[0].y);
-          for (let i = 1; i < pts.length; i++) {
-            ctx.lineTo(pts[i].x, pts[i].y);
-          }
-          ctx.stroke();
-        }
-      }
-
-      ctx.restore();
-    }
-
-    function saveState() {
-      if (history.length >= maxHistory) history.shift();
-      history.push({
-        strokes: JSON.parse(JSON.stringify(strokes)),
-        bg: bgImage ? bgImage.src : null,
-      });
-    }
-
-    function undo() {
-      if (history.length > 1) {
-        history.pop();
-        const prevState = history[history.length - 1];
-        strokes = JSON.parse(JSON.stringify(prevState.strokes));
-        if (prevState.bg) {
-          const img = new Image();
-          img.onload = () => {
-            bgImage = img;
-            redrawCanvas();
-          };
-          img.src = prevState.bg;
-        } else {
-          bgImage = null;
-          redrawCanvas();
-        }
-        statusBar.textContent = "Undo applied.";
-      } else {
-        clearCanvas();
-      }
-    }
-
-    function clearCanvas() {
-      strokes = [];
-      bgImage = null;
-      redrawCanvas();
-      history = [{ strokes: [], bg: null }];
-      statusBar.textContent = "Canvas cleared.";
-    }
-
-    function getCoordinates(e) {
-      const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return {
-        x: clientX - rect.left,
-        y: clientY - rect.top,
-      };
-    }
-
-    function distToSegmentSq(p, a, b) {
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      if (dx === 0 && dy === 0) {
-        return (p.x - a.x) ** 2 + (p.y - a.y) ** 2;
-      }
-      const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
-      const cx = a.x + t * dx;
-      const cy = a.y + t * dy;
-      return (p.x - cx) ** 2 + (p.y - cy) ** 2;
-    }
-
-    function applyStrokeEraser(x, y) {
-      const thresholdSq = 14 * 14;
-      const p = { x, y };
-      let changed = false;
-
-      strokes = strokes.filter((stroke) => {
-        const pts = stroke.points;
-        if (!pts || pts.length === 0) return false;
-
-        let hit = false;
-        if (pts.length === 1) {
-          hit = (pts[0].x - p.x) ** 2 + (pts[0].y - p.y) ** 2 <= thresholdSq;
-        } else {
-          for (let i = 0; i < pts.length - 1; i++) {
-            if (distToSegmentSq(p, pts[i], pts[i + 1]) <= thresholdSq) {
-              hit = true;
-              break;
-            }
-          }
-        }
-
-        if (hit) {
-          changed = true;
-          return false;
-        }
-        return true;
-      });
-
-      if (changed) redrawCanvas();
-      return changed;
-    }
-
-    function applyAreaEraser(ex, ey, radius = 12) {
-      const rSq = radius * radius;
-      const newStrokes = [];
-      let changed = false;
-
-      for (const stroke of strokes) {
-        const pts = stroke.points;
-        if (!pts || pts.length === 0) continue;
-
-        if (pts.length === 1) {
-          const dSq = (pts[0].x - ex) ** 2 + (pts[0].y - ey) ** 2;
-          if (dSq > rSq) {
-            newStrokes.push(stroke);
-          } else {
-            changed = true;
-          }
-          continue;
-        }
-
-        const dense = [];
-        for (let i = 0; i < pts.length; i++) {
-          if (i === 0) {
-            dense.push(pts[0]);
-          } else {
-            const p1 = dense[dense.length - 1];
-            const p2 = pts[i];
-            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-            const step = 3.0;
-            if (dist > step) {
-              const count = Math.floor(dist / step);
-              for (let k = 1; k <= count; k++) {
-                const t = k / (count + 1);
-                dense.push({ x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) });
-              }
-            }
-            dense.push(p2);
-          }
-        }
-
-        let currentSeg = [];
-        for (const p of dense) {
-          const dSq = (p.x - ex) ** 2 + (p.y - ey) ** 2;
-          if (dSq > rSq) {
-            currentSeg.push(p);
-          } else {
-            changed = true;
-            if (currentSeg.length >= 2) {
-              newStrokes.push({ points: currentSeg, width: stroke.width, color: stroke.color });
-            }
-            currentSeg = [];
-          }
-        }
-
-        if (currentSeg.length >= 2) {
-          newStrokes.push({ points: currentSeg, width: stroke.width, color: stroke.color });
-        }
-      }
-
-      if (changed) {
-        strokes = newStrokes;
-        redrawCanvas();
-      }
-      return changed;
-    }
-
-    function handleStart(e) {
-      isInteracting = true;
-      const { x, y } = getCoordinates(e);
-
-      if (currentMode === "pen") {
-        currentStroke = { points: [{ x, y }], width: 3.5, color: "#000000" };
-        strokes.push(currentStroke);
-        redrawCanvas();
-      } else if (currentMode === "stroke") {
-        applyStrokeEraser(x, y);
-      } else if (currentMode === "area") {
-        applyAreaEraser(x, y);
-        showEraserIndicator(x, y);
-      }
-    }
-
-    function handleMove(e) {
-      if (!isInteracting && currentMode !== "area") return;
-      e.preventDefault();
-      const { x, y } = getCoordinates(e);
-
-      if (currentMode === "pen" && isInteracting) {
-        currentStroke.points.push({ x, y });
-        redrawCanvas();
-      } else if (currentMode === "stroke" && isInteracting) {
-        applyStrokeEraser(x, y);
-      } else if (currentMode === "area") {
-        showEraserIndicator(x, y);
-        if (isInteracting) {
-          applyAreaEraser(x, y);
-        }
-      }
-    }
-
-    function handleEnd() {
-      if (isInteracting) {
-        isInteracting = false;
-        currentStroke = null;
-        saveState();
-      }
-      eraserIndicator.style.display = "none";
-    }
-
-    function showEraserIndicator(x, y) {
-      eraserIndicator.style.left = `${x}px`;
-      eraserIndicator.style.top = `${y}px`;
-      eraserIndicator.style.display = "block";
-    }
-
-    canvas.addEventListener("touchstart", handleStart, { passive: false });
-    canvas.addEventListener("touchmove", handleMove, { passive: false });
-    canvas.addEventListener("touchend", handleEnd);
-    canvas.addEventListener("mousedown", handleStart);
-    canvas.addEventListener("mousemove", handleMove);
-    canvas.addEventListener("mouseup", handleEnd);
-    canvas.addEventListener("mouseleave", handleEnd);
-
-    document.getElementById("clearBtn").addEventListener("click", clearCanvas);
-    document.getElementById("undoBtn").addEventListener("click", undo);
-
-    function handleImageFile(file) {
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          bgImage = img;
-          strokes = [];
-          redrawCanvas();
-          saveState();
-          statusBar.textContent = "Image loaded on canvas.";
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    document.getElementById("cameraUpload").addEventListener("change", (e) => {
-      handleImageFile(e.target.files[0]);
-    });
-    document.getElementById("fileUpload").addEventListener("change", (e) => {
-      handleImageFile(e.target.files[0]);
-    });
-
-    const apiKeyInput = document.getElementById("apiKey");
-    const savedKey = localStorage.getItem("gemini_api_key");
-    if (savedKey) apiKeyInput.value = savedKey;
-
-    document.getElementById("saveKeyBtn").addEventListener("click", () => {
-      const key = apiKeyInput.value.trim();
-      if (key) {
-        localStorage.setItem("gemini_api_key", key);
-        statusBar.textContent = "API key saved locally.";
-      } else {
-        localStorage.removeItem("gemini_api_key");
-        statusBar.textContent = "API key removed.";
-      }
-    });
-
-    function renderLatex(latexString) {
-      const previewArea = document.getElementById("previewArea");
-      const rawTextarea = document.getElementById("rawLatex");
-      rawTextarea.value = latexString;
-
-      let cleanMath = latexString.trim();
-      cleanMath = cleanMath.replace(/^\\\[/, "").replace(/\\\]$/, "");
-      cleanMath = cleanMath.replace(/^\$\$/, "").replace(/\$\$$/, "");
-      cleanMath = cleanMath.replace(/^\\begin{equation\*?}/, "").replace(/\\end{equation\*?}$/, "");
-
-      try {
-        katex.render(cleanMath, previewArea, {
-          displayMode: true,
-          throwOnError: false,
-        });
-      } catch (err) {
-        previewArea.textContent = latexString;
-      }
-    }
-
-    // Unified clipboard copy helper
-    async function copyToClipboard(text) {
-      if (!text) return false;
-
-      // 1. Try modern Clipboard API
-      try {
-        if (navigator.clipboard && navigator.clipboard.writeText) {
-          await navigator.clipboard.writeText(text);
-          return true;
-        }
-      } catch (e) {}
-
-      // 2. Mobile execCommand fallback
-      try {
-        const rawTextarea = document.getElementById("rawLatex");
-        rawTextarea.focus();
-        rawTextarea.select();
-        rawTextarea.setSelectionRange(0, 99999);
-        return document.execCommand("copy");
-      } catch (e) {
-        return false;
-      }
-    }
-
-    async function convertToLatex() {
-      const apiKey = apiKeyInput.value.trim() || localStorage.getItem("gemini_api_key");
-      const convertBtn = document.getElementById("convertBtn");
-      const copyBtn = document.getElementById("copyBtn");
-
-      if (!apiKey) {
-        statusBar.textContent = "Please provide a Google AI Studio API key.";
-        apiKeyInput.focus();
-        return;
-      }
-
-      convertBtn.disabled = true;
-
-      const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
-
-      const promptText = 
-        "You are an expert LaTeX transcription system specializing in advanced mathematics, physics, and chemistry.\n" +
-        "Task: Transcribe all handwritten or printed mathematical and physical formulas from the provided image into clean, standard LaTeX code.\n" +
-        "Rules:\n" +
-        "1. Output ONLY the LaTeX code. Do NOT wrap in markdown code fences (no ```latex or ```).\n" +
-        "2. Do NOT add conversational replies, commentary, or greetings.\n" +
-        "3. Use standard packages such as amsmath, amssymb, and physics.\n" +
-        "4. For multi-line equations or derivations, use the \\begin{align*} ... \\end{align*} environment.\n" +
-        "5. For single formulas, write the raw math expression or standard equation format without excess whitespace.";
-
-      const payload = {
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: promptText },
-              {
-                inline_data: {
-                  mime_type: "image/png",
-                  data: base64Data,
-                },
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.1,
-        },
-      };
-
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
-      const maxAttempts = 5;
-
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        statusBar.textContent = attempt === 1 
-          ? "Transcribing with Gemini 3.8 Flash..." 
-          : `Retrying (${attempt}/${maxAttempts})...`;
-        convertBtn.textContent = "⏳ Converting...";
-
-        try {
-          const response = await fetch(endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            const errMsg = errData.error?.message || `HTTP ${response.status}`;
-
-            if (response.status === 400 || response.status === 401 || response.status === 403) {
-              throw new Error(`API Key error: ${errMsg}`);
-            }
-
-            if (attempt < maxAttempts) {
-              let waitSec = 2 * attempt;
-              const match = errMsg.match(/retry in ([0-9.]+)s/i);
-              if (match && match[1]) {
-                const parsed = parseFloat(match[1]);
-                if (!isNaN(parsed) && parsed > 0) {
-                  waitSec = Math.ceil(parsed);
-                }
-              }
-
-              for (let s = waitSec; s > 0; s--) {
-                statusBar.textContent = `Server busy. Retrying in ${s}s (Attempt ${attempt + 1}/${maxAttempts})...`;
-                convertBtn.textContent = `⏳ Retrying in ${s}s...`;
-                await new Promise((r) => setTimeout(r, 1000));
-              }
-              continue;
-            } else {
-              throw new Error(errMsg);
-            }
-          }
-
-          const data = await response.json();
-          let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          rawText = rawText.replace(/```latex/gi, "").replace(/```/g, "").trim();
-
-          if (rawText) {
-            renderLatex(rawText);
-
-            // AUTOMATIC COPY TO CLIPBOARD
-            const autoCopied = await copyToClipboard(rawText);
-            if (autoCopied) {
-              statusBar.textContent = "Conversion complete & copied to clipboard! ✓";
-              copyBtn.textContent = "Copied! ✓";
-              setTimeout(() => {
-                copyBtn.textContent = "Copy LaTeX";
-              }, 2500);
-            } else {
-              statusBar.textContent = "Conversion complete. Tap 'Copy LaTeX' below.";
-            }
-
-            convertBtn.disabled = false;
-            convertBtn.textContent = "⚡ Convert to LaTeX";
-            return;
-          } else {
-            statusBar.textContent = "No formula detected. Please redraw clearly.";
-            convertBtn.disabled = false;
-            convertBtn.textContent = "⚡ Convert to LaTeX";
-            return;
-          }
-        } catch (error) {
-          const isNetworkError = error.name === "TypeError" || error.message.includes("fetch");
-          if (isNetworkError && attempt < maxAttempts) {
-            for (let s = 2; s > 0; s--) {
-              statusBar.textContent = `Connection issue. Retrying in ${s}s...`;
-              convertBtn.textContent = `⏳ Retrying in ${s}s...`;
-              await new Promise((r) => setTimeout(r, 1000));
-            }
-            continue;
-          }
-
-          statusBar.textContent = `Error: ${error.message}`;
-          convertBtn.disabled = false;
-          convertBtn.textContent = "⚡ Convert to LaTeX";
-          return;
-        }
-      }
-
-      convertBtn.disabled = false;
-      convertBtn.textContent = "⚡ Convert to LaTeX";
-    }
-
-    document.getElementById("convertBtn").addEventListener("click", convertToLatex);
-
-    // Manual copy button listener
-    document.getElementById("copyBtn").addEventListener("click", async () => {
-      const rawText = document.getElementById("rawLatex").value;
-      if (!rawText) return;
-
-      const copyBtn = document.getElementById("copyBtn");
-      const copied = await copyToClipboard(rawText);
-      if (copied) {
-        copyBtn.textContent = "Copied! ✓";
-        statusBar.textContent = "LaTeX copied to clipboard.";
-        setTimeout(() => {
-          copyBtn.textContent = "Copy LaTeX";
-        }, 1800);
-      } else {
-        statusBar.textContent = "Long-press the text box below to copy.";
-      }
-    });
-
-    window.addEventListener("load", resizeCanvas);
-    window.addEventListener("resize", resizeCanvas);
-  </script>
-</body>
-</html>t vRatio = rect.height / bgImage.height;
-        const ratio = Math.min(hRatio, vRatio);
-        const shiftX = (rect.width - bgImage.width * ratio) / 2;
-        const shiftY = (rect.height - bgImage.height * ratio) / 2;
-        ctx.drawImage(bgImage, 0, 0, bgImage.width, bgImage.height, shiftX, shiftY, bgImage.width * ratio, bgImage.height * ratio);
-      }
-
-      ctx.lineCap = "round";
-      ctx.lineJoin = "round";
-
-      for (const stroke of strokes) {
-        const pts = stroke.points;
-        if (!pts || pts.length === 0) continue;
-
-        ctx.lineWidth = stroke.width || 3.5;
-        ctx.strokeStyle = stroke.color || "#000000";
-        ctx.fillStyle = stroke.color || "#000000";
-
-        if (pts.length === 1) {
-          ctx.beginPath();
-          ctx.arc(pts[0].x, pts[0].y, (stroke.width || 3.5) / 2, 0, Math.PI * 2);
-          ctx.fill();
-        } else {
-          ctx.beginPath();
-          ctx.moveTo(pts[0].x, pts[0].y);
-          for (let i = 1; i < pts.length; i++) {
-            ctx.lineTo(pts[i].x, pts[i].y);
-          }
-          ctx.stroke();
-        }
-      }
-
-      ctx.restore();
-    }
-
-    function saveState() {
-      if (history.length >= maxHistory) history.shift();
-      history.push({
-        strokes: JSON.parse(JSON.stringify(strokes)),
-        bg: bgImage ? bgImage.src : null,
-      });
-    }
-
-    function undo() {
-      if (history.length > 1) {
-        history.pop();
-        const prevState = history[history.length - 1];
-        strokes = JSON.parse(JSON.stringify(prevState.strokes));
-        if (prevState.bg) {
-          const img = new Image();
-          img.onload = () => {
-            bgImage = img;
-            redrawCanvas();
-          };
-          img.src = prevState.bg;
-        } else {
-          bgImage = null;
-          redrawCanvas();
-        }
-        document.getElementById("statusBar").textContent = "Undo applied.";
-      } else {
-        clearCanvas();
-      }
-    }
-
-    function clearCanvas() {
-      strokes = [];
-      bgImage = null;
-      redrawCanvas();
-      history = [{ strokes: [], bg: null }];
-      document.getElementById("statusBar").textContent = "Canvas cleared.";
-    }
-
-    function getCoordinates(e) {
-      const rect = canvas.getBoundingClientRect();
-      const clientX = e.touches ? e.touches[0].clientX : e.clientX;
-      const clientY = e.touches ? e.touches[0].clientY : e.clientY;
-      return {
-        x: clientX - rect.left,
-        y: clientY - rect.top,
-      };
-    }
-
-    function distToSegmentSq(p, a, b) {
-      const dx = b.x - a.x;
-      const dy = b.y - a.y;
-      if (dx === 0 && dy === 0) {
-        return (p.x - a.x) ** 2 + (p.y - a.y) ** 2;
-      }
-      const t = Math.max(0, Math.min(1, ((p.x - a.x) * dx + (p.y - a.y) * dy) / (dx * dx + dy * dy)));
-      const cx = a.x + t * dx;
-      const cy = a.y + t * dy;
-      return (p.x - cx) ** 2 + (p.y - cy) ** 2;
-    }
-
-    function applyStrokeEraser(x, y) {
-      const thresholdSq = 14 * 14;
-      const p = { x, y };
-      let changed = false;
-
-      strokes = strokes.filter((stroke) => {
-        const pts = stroke.points;
-        if (!pts || pts.length === 0) return false;
-
-        let hit = false;
-        if (pts.length === 1) {
-          hit = (pts[0].x - p.x) ** 2 + (pts[0].y - p.y) ** 2 <= thresholdSq;
-        } else {
-          for (let i = 0; i < pts.length - 1; i++) {
-            if (distToSegmentSq(p, pts[i], pts[i + 1]) <= thresholdSq) {
-              hit = true;
-              break;
-            }
-          }
-        }
-
-        if (hit) {
-          changed = true;
-          return false;
-        }
-        return true;
-      });
-
-      if (changed) redrawCanvas();
-      return changed;
-    }
-
-    function applyAreaEraser(ex, ey, radius = 12) {
-      const rSq = radius * radius;
-      const newStrokes = [];
-      let changed = false;
-
-      for (const stroke of strokes) {
-        const pts = stroke.points;
-        if (!pts || pts.length === 0) continue;
-
-        if (pts.length === 1) {
-          const dSq = (pts[0].x - ex) ** 2 + (pts[0].y - ey) ** 2;
-          if (dSq > rSq) {
-            newStrokes.push(stroke);
-          } else {
-            changed = true;
-          }
-          continue;
-        }
-
-        const dense = [];
-        for (let i = 0; i < pts.length; i++) {
-          if (i === 0) {
-            dense.push(pts[0]);
-          } else {
-            const p1 = dense[dense.length - 1];
-            const p2 = pts[i];
-            const dist = Math.hypot(p2.x - p1.x, p2.y - p1.y);
-            const step = 3.0;
-            if (dist > step) {
-              const count = Math.floor(dist / step);
-              for (let k = 1; k <= count; k++) {
-                const t = k / (count + 1);
-                dense.push({ x: p1.x + t * (p2.x - p1.x), y: p1.y + t * (p2.y - p1.y) });
-              }
-            }
-            dense.push(p2);
-          }
-        }
-
-        let currentSeg = [];
-        for (const p of dense) {
-          const dSq = (p.x - ex) ** 2 + (p.y - ey) ** 2;
-          if (dSq > rSq) {
-            currentSeg.push(p);
-          } else {
-            changed = true;
-            if (currentSeg.length >= 2) {
-              newStrokes.push({ points: currentSeg, width: stroke.width, color: stroke.color });
-            }
-            currentSeg = [];
-          }
-        }
-
-        if (currentSeg.length >= 2) {
-          newStrokes.push({ points: currentSeg, width: stroke.width, color: stroke.color });
-        }
-      }
-
-      if (changed) {
-        strokes = newStrokes;
-        redrawCanvas();
-      }
-      return changed;
-    }
-
-    function handleStart(e) {
-      isInteracting = true;
-      const { x, y } = getCoordinates(e);
-
-      if (currentMode === "pen") {
-        currentStroke = { points: [{ x, y }], width: 3.5, color: "#000000" };
-        strokes.push(currentStroke);
-        redrawCanvas();
-      } else if (currentMode === "stroke") {
-        applyStrokeEraser(x, y);
-      } else if (currentMode === "area") {
-        applyAreaEraser(x, y);
-        showEraserIndicator(x, y);
-      }
-    }
-
-    function handleMove(e) {
-      if (!isInteracting && currentMode !== "area") return;
-      e.preventDefault();
-      const { x, y } = getCoordinates(e);
-
-      if (currentMode === "pen" && isInteracting) {
-        currentStroke.points.push({ x, y });
-        redrawCanvas();
-      } else if (currentMode === "stroke" && isInteracting) {
-        applyStrokeEraser(x, y);
-      } else if (currentMode === "area") {
-        showEraserIndicator(x, y);
-        if (isInteracting) {
-          applyAreaEraser(x, y);
-        }
-      }
-    }
-
-    function handleEnd() {
-      if (isInteracting) {
-        isInteracting = false;
-        currentStroke = null;
-        saveState();
-      }
-      eraserIndicator.style.display = "none";
-    }
-
-    function showEraserIndicator(x, y) {
-      eraserIndicator.style.left = `${x}px`;
-      eraserIndicator.style.top = `${y}px`;
-      eraserIndicator.style.display = "block";
-    }
-
-    canvas.addEventListener("touchstart", handleStart, { passive: false });
-    canvas.addEventListener("touchmove", handleMove, { passive: false });
-    canvas.addEventListener("touchend", handleEnd);
-    canvas.addEventListener("mousedown", handleStart);
-    canvas.addEventListener("mousemove", handleMove);
-    canvas.addEventListener("mouseup", handleEnd);
-    canvas.addEventListener("mouseleave", handleEnd);
-
-    document.getElementById("clearBtn").addEventListener("click", clearCanvas);
-    document.getElementById("undoBtn").addEventListener("click", undo);
-
-    function handleImageFile(file) {
-      if (!file) return;
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const img = new Image();
-        img.onload = () => {
-          bgImage = img;
-          strokes = [];
-          redrawCanvas();
-          saveState();
-          document.getElementById("statusBar").textContent = "Image loaded on canvas.";
-        };
-        img.src = event.target.result;
-      };
-      reader.readAsDataURL(file);
-    }
-
-    document.getElementById("cameraUpload").addEventListener("change", (e) => {
-      handleImageFile(e.target.files[0]);
-    });
-    document.getElementById("fileUpload").addEventListener("change", (e) => {
-      handleImageFile(e.target.files[0]);
-    });
-
-    const apiKeyInput = document.getElementById("apiKey");
-    const savedKey = localStorage.getItem("gemini_api_key");
-    if (savedKey) apiKeyInput.value = savedKey;
-
-    document.getElementById("saveKeyBtn").addEventListener("click", () => {
-      const key = apiKeyInput.value.trim();
-      if (key) {
-        localStorage.setItem("gemini_api_key", key);
-        document.getElementById("statusBar").textContent = "API key saved locally.";
-      } else {
-        localStorage.removeItem("gemini_api_key");
-        document.getElementById("statusBar").textContent = "API key removed.";
-      }
-    });
-
-    function renderLatex(latexString) {
-      const previewArea = document.getElementById("previewArea");
-      const rawTextarea = document.getElementById("rawLatex");
-      rawTextarea.value = latexString;
-
-      let cleanMath = latexString.trim();
-      cleanMath = cleanMath.replace(/^\\\[/, "").replace(/\\\]$/, "");
-      cleanMath = cleanMath.replace(/^\$\$/, "").replace(/\$\$$/, "");
-      cleanMath = cleanMath.replace(/^\\begin{equation\*?}/, "").replace(/\\end{equation\*?}$/, "");
-
-      try {
-        katex.render(cleanMath, previewArea, {
-          displayMode: true,
-          throwOnError: false,
-        });
-      } catch (err) {
-        previewArea.textContent = latexString;
-      }
-    }
-
-    async function convertToLatex() {
-      const apiKey = apiKeyInput.value.trim() || localStorage.getItem("gemini_api_key");
-      const statusBar = document.getElementById("statusBar");
-      const convertBtn = document.getElementById("convertBtn");
-
-      if (!apiKey) {
-        statusBar.textContent = "Please provide a Google AI Studio API key.";
-        apiKeyInput.focus();
-        return;
-      }
-
-      convertBtn.disabled = true;
-
-      const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
-
-      const promptText = 
-        "You are an expert LaTeX transcription system specializing in advanced mathematics, physics, and chemistry.\n" +
-        "Task: Transcribe all handwritten or printed mathematical and physical formulas from the provided image into clean, standard LaTeX code.\n" +
-        "Rules:\n" +
-        "1. Output ONLY the LaTeX code. Do NOT wrap in markdown code fences (no ```latex or ```).\n" +
-        "2. Do NOT add conversational replies, commentary, or greetings.\n" +
-        "3. Use standard packages such as amsmath, amssymb, and physics.\n" +
-        "4. For multi-line equations or derivations, use the \\begin{align*} ... \\end{align*} environment.\n" +
-        "5. For single formulas, write the raw math expression or standard equation format without excess whitespace.";
-
-      const payload = {
-        contents: [
-          {
-            role: "user",
-            parts: [
-              { text: promptText },
-              {
-                inline_data: {
-                  mime_type: "image/png",
-                  data: base64Data,
-                },
-              },
-            ],
-          },
-        ],
-        generationConfig: {
-          temperature: 0.1,
-        },
-      };
-
-      const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
-      const maxAttempts = 5;
-
-      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-        statusBar.textContent = attempt === 1 
-          ? "Transcribing with Gemini 3.8 Flash..." 
-          : `Retrying (${attempt}/${maxAttempts})...`;
-        convertBtn.textContent = "⏳ Converting...";
-
-        try {
-          const response = await fetch(endpoint, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(payload),
-          });
-
-          if (!response.ok) {
-            const errData = await response.json().catch(() => ({}));
-            const errMsg = errData.error?.message || `HTTP ${response.status}`;
-
-            // Do not retry permanently invalid requests (like bad API keys)
-            if (response.status === 400 || response.status === 401 || response.status === 403) {
-              throw new Error(`API Key error: ${errMsg}`);
-            }
-
-            // If temporary error (503 High Demand, 429 Rate Limit, server timeouts)
-            if (attempt < maxAttempts) {
-              let waitSec = 2 * attempt;
-              const match = errMsg.match(/retry in ([0-9.]+)s/i);
-              if (match && match[1]) {
-                const parsed = parseFloat(match[1]);
-                if (!isNaN(parsed) && parsed > 0) {
-                  waitSec = Math.ceil(parsed);
-                }
-              }
-
-              // Live countdown before auto-retry
-              for (let s = waitSec; s > 0; s--) {
-                statusBar.textContent = `Server busy. Retrying in ${s}s (Attempt ${attempt + 1}/${maxAttempts})...`;
-                convertBtn.textContent = `⏳ Retrying in ${s}s...`;
-                await new Promise((r) => setTimeout(r, 1000));
-              }
-              continue; // Auto-retries automatically!
-            } else {
-              throw new Error(errMsg);
-            }
-          }
-
-          const data = await response.json();
-          let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-          rawText = rawText.replace(/```latex/gi, "").replace(/```/g, "").trim();
-
-          if (rawText) {
-            renderLatex(rawText);
-            statusBar.textContent = "Conversion complete.";
-            convertBtn.disabled = false;
-            convertBtn.textContent = "⚡ Convert to LaTeX";
-            return;
-          } else {
-            statusBar.textContent = "No formula detected. Please redraw clearly.";
-            convertBtn.disabled = false;
-            convertBtn.textContent = "⚡ Convert to LaTeX";
-            return;
-          }
-        } catch (error) {
-          const isNetworkError = error.name === "TypeError" || error.message.includes("fetch");
-          if (isNetworkError && attempt < maxAttempts) {
-            for (let s = 2; s > 0; s--) {
-              statusBar.textContent = `Connection issue. Retrying in ${s}s...`;
-              convertBtn.textContent = `⏳ Retrying in ${s}s...`;
-              await new Promise((r) => setTimeout(r, 1000));
-            }
-            continue;
-          }
-
-          statusBar.textContent = `Error: ${error.message}`;
-          convertBtn.disabled = false;
-          convertBtn.textContent = "⚡ Convert to LaTeX";
-          return;
-        }
-      }
-
-      convertBtn.disabled = false;
-      convertBtn.textContent = "⚡ Convert to LaTeX";
-    }
-
-    document.getElementById("convertBtn").addEventListener("click", convertToLatex);
-
-    
-
-    window.addEventListener("load", resizeCanvas);
-    window.addEventListener("resize", resizeCanvas);
-  </script>
 </body>
 </html>
