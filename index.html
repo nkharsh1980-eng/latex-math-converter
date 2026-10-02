@@ -124,7 +124,6 @@
       cursor: crosshair;
     }
 
-    /* Eraser indicator circle */
     .eraser-indicator {
       position: absolute;
       width: 24px;
@@ -138,7 +137,6 @@
       z-index: 10;
     }
 
-    /* Tool Selector Buttons */
     .tool-selector {
       display: flex;
       gap: 6px;
@@ -298,14 +296,12 @@
         <div class="eraser-indicator" id="eraserIndicator"></div>
       </div>
 
-      <!-- Tool Switcher -->
       <div class="tool-selector">
         <button class="tool-btn active" id="penTool" data-mode="pen">✏️ Pen</button>
         <button class="tool-btn" id="areaEraserTool" data-mode="area">🧹 Area Eraser</button>
         <button class="tool-btn" id="strokeEraserTool" data-mode="stroke">⚡ Stroke Eraser</button>
       </div>
 
-      <!-- Action Buttons -->
       <div class="toolbar">
         <button class="btn btn-danger" id="clearBtn">Clear</button>
         <button class="btn" id="undoBtn">Undo</button>
@@ -346,15 +342,14 @@
     const ctx = canvas.getContext("2d");
     const eraserIndicator = document.getElementById("eraserIndicator");
 
-    let currentMode = "pen"; // 'pen', 'area', or 'stroke'
+    let currentMode = "pen";
     let isInteracting = false;
-    let strokes = []; // Array of { points: [{x, y}], width: number, color: string }
+    let strokes = [];
     let currentStroke = null;
     let bgImage = null;
     let history = [];
     const maxHistory = 20;
 
-    // Tool switching
     const toolButtons = document.querySelectorAll(".tool-btn");
     toolButtons.forEach((btn) => {
       btn.addEventListener("click", () => {
@@ -396,7 +391,6 @@
 
       ctx.scale(dpr, dpr);
 
-      // Render background photo if uploaded
       if (bgImage) {
         const hRatio = rect.width / bgImage.width;
         const vRatio = rect.height / bgImage.height;
@@ -406,7 +400,6 @@
         ctx.drawImage(bgImage, 0, 0, bgImage.width, bgImage.height, shiftX, shiftY, bgImage.width * ratio, bgImage.height * ratio);
       }
 
-      // Render all vector strokes
       ctx.lineCap = "round";
       ctx.lineJoin = "round";
 
@@ -483,7 +476,6 @@
       };
     }
 
-    // Math helper: distance from point P to line segment AB squared
     function distToSegmentSq(p, a, b) {
       const dx = b.x - a.x;
       const dy = b.y - a.y;
@@ -496,7 +488,6 @@
       return (p.x - cx) ** 2 + (p.y - cy) ** 2;
     }
 
-    // Mode 2: Stroke Eraser (Deletes entire continuous stroke on touch)
     function applyStrokeEraser(x, y) {
       const thresholdSq = 14 * 14;
       const p = { x, y };
@@ -520,7 +511,7 @@
 
         if (hit) {
           changed = true;
-          return false; // remove this stroke
+          return false;
         }
         return true;
       });
@@ -529,7 +520,6 @@
       return changed;
     }
 
-    // Mode 1: Area Eraser (Erases only where hovered/touched by splitting strokes)
     function applyAreaEraser(ex, ey, radius = 12) {
       const rSq = radius * radius;
       const newStrokes = [];
@@ -542,14 +532,13 @@
         if (pts.length === 1) {
           const dSq = (pts[0].x - ex) ** 2 + (pts[0].y - ey) ** 2;
           if (dSq > rSq) {
-            newStrokes.append ? newStrokes.append(stroke) : newStrokes.push(stroke);
+            newStrokes.push(stroke);
           } else {
             changed = true;
           }
           continue;
         }
 
-        // Interpolate points along the stroke to ensure no segment skips
         const dense = [];
         for (let i = 0; i < pts.length; i++) {
           if (i === 0) {
@@ -570,16 +559,13 @@
           }
         }
 
-        // Split stroke into sub-segments that fall outside the eraser circle
         let currentSeg = [];
-        let modified = false;
-
         for (const p of dense) {
           const dSq = (p.x - ex) ** 2 + (p.y - ey) ** 2;
           if (dSq > rSq) {
             currentSeg.push(p);
           } else {
-            modified = true;
+            changed = true;
             if (currentSeg.length >= 2) {
               newStrokes.push({ points: currentSeg, width: stroke.width, color: stroke.color });
             }
@@ -590,8 +576,6 @@
         if (currentSeg.length >= 2) {
           newStrokes.push({ points: currentSeg, width: stroke.width, color: stroke.color });
         }
-
-        if (modified) changed = true;
       }
 
       if (changed) {
@@ -601,7 +585,6 @@
       return changed;
     }
 
-    // Touch & Mouse Handling
     function handleStart(e) {
       isInteracting = true;
       const { x, y } = getCoordinates(e);
@@ -733,7 +716,6 @@
       }
 
       convertBtn.disabled = true;
-      statusBar.textContent = "Transcribing with Gemini 3.8 Flash...";
 
       const base64Data = canvas.toDataURL("image/png").replace(/^data:image\/png;base64,/, "");
 
@@ -768,58 +750,89 @@
       };
 
       const endpoint = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3.8-flash:generateContent?key=${apiKey}`;
+      const maxAttempts = 5;
 
-      try {
-        const response = await fetch(endpoint, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(payload),
-        });
+      for (let attempt = 1; attempt <= maxAttempts; attempt++) {
+        statusBar.textContent = attempt === 1 
+          ? "Transcribing with Gemini 3.8 Flash..." 
+          : `Retrying (${attempt}/${maxAttempts})...`;
+        convertBtn.textContent = "⏳ Converting...";
 
-        if (!response.ok) {
-          const errData = await response.json().catch(() => ({}));
-          const errMsg = errData.error?.message || `HTTP ${response.status}`;
+        try {
+          const response = await fetch(endpoint, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
 
-          if (response.status === 429 || errMsg.includes("Quota exceeded")) {
-            const match = errMsg.match(/retry in ([0-9.]+)s/i);
-            let waitSeconds = match && match ? Math.ceil(parseFloat(match)) : 15;
+          if (!response.ok) {
+            const errData = await response.json().catch(() => ({}));
+            const errMsg = errData.error?.message || `HTTP ${response.status}`;
 
-            const timer = setInterval(() => {
-              if (waitSeconds <= 0) {
-                clearInterval(timer);
-                statusBar.textContent = "Ready to try again.";
-                convertBtn.disabled = false;
-                convertBtn.textContent = "⚡ Convert to LaTeX";
-              } else {
-                convertBtn.textContent = `Wait ${waitSeconds}s...`;
-                statusBar.textContent = `Rate limit cooldown: ${waitSeconds}s remaining`;
-                waitSeconds--;
+            // Do not retry permanently invalid requests (like bad API keys)
+            if (response.status === 400 || response.status === 401 || response.status === 403) {
+              throw new Error(`API Key error: ${errMsg}`);
+            }
+
+            // If temporary error (503 High Demand, 429 Rate Limit, server timeouts)
+            if (attempt < maxAttempts) {
+              let waitSec = 2 * attempt;
+              const match = errMsg.match(/retry in ([0-9.]+)s/i);
+              if (match && match[1]) {
+                const parsed = parseFloat(match[1]);
+                if (!isNaN(parsed) && parsed > 0) {
+                  waitSec = Math.ceil(parsed);
+                }
               }
-            }, 1000);
-            return;
+
+              // Live countdown before auto-retry
+              for (let s = waitSec; s > 0; s--) {
+                statusBar.textContent = `Server busy. Retrying in ${s}s (Attempt ${attempt + 1}/${maxAttempts})...`;
+                convertBtn.textContent = `⏳ Retrying in ${s}s...`;
+                await new Promise((r) => setTimeout(r, 1000));
+              }
+              continue; // Auto-retries automatically!
+            } else {
+              throw new Error(errMsg);
+            }
           }
 
-          throw new Error(errMsg);
-        }
+          const data = await response.json();
+          let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          rawText = rawText.replace(/```latex/gi, "").replace(/```/g, "").trim();
 
-        const data = await response.json();
-        let rawText = data.candidates?.[0]?.content?.parts?.[0]?.text || "";
-        rawText = rawText.replace(/```latex/gi, "").replace(/```/g, "").trim();
+          if (rawText) {
+            renderLatex(rawText);
+            statusBar.textContent = "Conversion complete.";
+            convertBtn.disabled = false;
+            convertBtn.textContent = "⚡ Convert to LaTeX";
+            return;
+          } else {
+            statusBar.textContent = "No formula detected. Please redraw clearly.";
+            convertBtn.disabled = false;
+            convertBtn.textContent = "⚡ Convert to LaTeX";
+            return;
+          }
+        } catch (error) {
+          const isNetworkError = error.name === "TypeError" || error.message.includes("fetch");
+          if (isNetworkError && attempt < maxAttempts) {
+            for (let s = 2; s > 0; s--) {
+              statusBar.textContent = `Connection issue. Retrying in ${s}s...`;
+              convertBtn.textContent = `⏳ Retrying in ${s}s...`;
+              await new Promise((r) => setTimeout(r, 1000));
+            }
+            continue;
+          }
 
-        if (rawText) {
-          renderLatex(rawText);
-          statusBar.textContent = "Conversion complete.";
-        } else {
-          statusBar.textContent = "No formula detected. Please redraw clearly.";
-        }
-      } catch (error) {
-        statusBar.textContent = `Error: ${error.message}`;
-      } finally {
-        if (!convertBtn.textContent.includes("Wait")) {
+          statusBar.textContent = `Error: ${error.message}`;
           convertBtn.disabled = false;
           convertBtn.textContent = "⚡ Convert to LaTeX";
+          return;
         }
       }
+
+      convertBtn.disabled = false;
+      convertBtn.textContent = "⚡ Convert to LaTeX";
     }
 
     document.getElementById("convertBtn").addEventListener("click", convertToLatex);
